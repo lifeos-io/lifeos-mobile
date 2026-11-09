@@ -57,6 +57,21 @@ export type StrategyVersion = {
   effortAllocation: EffortAllocation;
 };
 
+// strategyversion/dto/CreateStrategyVersionRequest
+export type CreateStrategyVersion = {
+  /** The current version's number, or null for the goal's first strategy (a mismatch is a 409). */
+  expectedCurrentVersionNo: number | null;
+  summary: string;
+  /** Required when revising. */
+  changeReason: string | null;
+  /** A phase carried over from the current version keeps its key; a new one has none. */
+  phases: (Omit<Phase, 'ordinal' | 'phaseKey'> & { phaseKey: Uuid | null })[];
+  effortAllocation: EffortAllocation;
+};
+
+// knowledge/dto/CreateKnowledgeItemRequest
+export type CreateKnowledgeItem = Pick<KnowledgeItem, 'statement' | 'kind' | 'status' | 'external' | 'source' | 'howToVerify'>;
+
 // knowledge/dto/KnowledgeItemResponse
 export type KnowledgeKind = 'FACT' | 'ASSUMPTION' | 'UNKNOWN';
 export type KnowledgeStatus = 'UNVERIFIED' | 'PARTIAL' | 'VERIFIED' | 'FALSIFIED';

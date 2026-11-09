@@ -3,7 +3,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { coach } from './coach';
 import { strategy, type IdeaTransition } from './strategy';
-import type { Action, ActionStatus, CompleteWeeklyReview, CreateGoal, Uuid } from './types';
+import type {
+  Action,
+  ActionStatus,
+  CompleteWeeklyReview,
+  CreateGoal,
+  CreateKnowledgeItem,
+  CreateStrategyVersion,
+  Uuid,
+} from './types';
 
 /** Query keys, one per endpoint. */
 export const keys = {
@@ -48,6 +56,28 @@ export function useKnowledgeItems(goalId: Uuid | undefined) {
     queryKey: keys.knowledge(goalId ?? ''),
     queryFn: () => strategy.listKnowledgeItems(goalId!),
     enabled: !!goalId,
+  });
+}
+
+/** A new version of the goal's route (the first one, or a revision): it becomes current. */
+export function useCreateStrategyVersion(goalId: Uuid | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CreateStrategyVersion) => strategy.createStrategyVersion(goalId!, request),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.currentStrategy(goalId ?? '') }),
+        // A revision makes pending proposals based on the old version inapplicable.
+        queryClient.invalidateQueries({ queryKey: keys.proposals }),
+      ]),
+  });
+}
+
+export function useCreateKnowledgeItem(goalId: Uuid | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (item: CreateKnowledgeItem) => strategy.createKnowledgeItem(goalId!, item),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.knowledge(goalId ?? '') }),
   });
 }
 
@@ -198,6 +228,7 @@ export function useStartMission() {
           status: 'VERIFIED',
           external: false,
           source: 'Kısıt',
+          howToVerify: null,
         });
       }
       await strategy.updateProfile({ onboardingCompleted: true });

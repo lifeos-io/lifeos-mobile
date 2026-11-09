@@ -5,6 +5,7 @@ import { useDecision, useKnowledgeById } from '@/api/hooks';
 import type { Decision, KnowledgeItem } from '@/api/types';
 import { Card, LoadError, Loading, Pill, Screen, ScreenHeader, Txt, type PillTone } from '@/components';
 import { dayMonth, daysBetween, today } from '@/lib/format';
+import { knowledgePills } from '@/lib/strategy';
 import { colors } from '@/theme';
 
 const statusPills: Record<Decision['status'], { label: string; tone: PillTone }> = {
@@ -12,13 +13,6 @@ const statusPills: Record<Decision['status'], { label: string; tone: PillTone }>
   OPEN: { label: 'Açık', tone: 'acid' },
   CLOSED: { label: 'Kapandı', tone: 'muted' },
   SUPERSEDED: { label: 'Yerine yenisi geldi', tone: 'muted' },
-};
-
-const assumptionPills: Record<KnowledgeItem['status'], { label: string; tone: PillTone }> = {
-  UNVERIFIED: { label: 'Doğrulanmadı', tone: 'signal' },
-  PARTIAL: { label: 'Kısmen', tone: 'acid' },
-  VERIFIED: { label: 'Doğrulandı', tone: 'acid' },
-  FALSIFIED: { label: 'Yanlışlandı', tone: 'signal' },
 };
 
 /** Manevra kaydı — a decision: the options weighed, the assumptions under it, what should follow (Figma 07). */
@@ -61,7 +55,7 @@ export default function DecisionScreen() {
             Dayandığı varsayımlar
           </Txt>
           {assumptions.map((item) => {
-            const pill = assumptionPills[item.status];
+            const pill = knowledgePills[item.status];
             return (
               <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <Txt style={{ flex: 1 }}>{item.statement}</Txt>

@@ -1,7 +1,9 @@
 export { ActionRow } from './ActionRow';
 export { Button } from './Button';
 export { Card } from './Card';
+export { Chips, Stepper, Toggle } from './Choice';
 export { EffortBar, EffortLegend, effortColors } from './EffortBar';
+export { Field } from './Field';
 export * from './icons';
 export { LoadError, Loading } from './Loading';
 export { Orbit, type Satellite } from './Orbit';

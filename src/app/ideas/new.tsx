@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { TextInput, View } from 'react-native';
 
 import { useCaptureIdea, useMainGoal } from '@/api/hooks';
-import { Button, Screen, ScreenHeader, Txt } from '@/components';
+import { Button, Field, Screen, ScreenHeader, Txt } from '@/components';
 import { errorMessage } from '@/lib/errors';
 import { goBack } from '@/lib/navigation';
-import { colors, layout, typography } from '@/theme';
 
 const TITLE_MAX = 200;
 const NOTE_MAX = 4000;
@@ -48,43 +46,5 @@ export default function NewIdeaScreen() {
         </Txt>
       ) : null}
     </Screen>
-  );
-}
-
-function Field({
-  label,
-  multiline,
-  ...props
-}: {
-  label: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  maxLength: number;
-  multiline?: boolean;
-  autoFocus?: boolean;
-}) {
-  return (
-    <View
-      style={{
-        backgroundColor: colors.cabin,
-        borderRadius: layout.cardRadius,
-        borderWidth: 1,
-        borderColor: colors.line,
-        padding: layout.cardPadding,
-        gap: 6,
-      }}>
-      <Txt variant="small" color="moonMid">
-        {label}
-      </Txt>
-      <TextInput
-        {...props}
-        accessibilityLabel={label}
-        multiline={multiline}
-        placeholderTextColor={colors.moonFaint}
-        selectionColor={colors.acid}
-        style={[typography.cardTitle, { color: colors.moon, minHeight: multiline ? 88 : undefined, padding: 0 }]}
-        textAlignVertical={multiline ? 'top' : 'center'}
-      />
-    </View>
   );
 }

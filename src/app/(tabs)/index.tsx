@@ -1,4 +1,4 @@
-import { Link, router, type Href } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import {
@@ -13,6 +13,7 @@ import {
 import type { Action, ChangeProposal, StrategyVersion } from '@/api/types';
 import {
   ActionRow,
+  Button,
   Card,
   ChevronRightIcon,
   LoadError,
@@ -28,11 +29,6 @@ import { signOut } from '@/auth/session';
 import { config } from '@/config';
 import { clock, daysBetween, today } from '@/lib/format';
 import { activePhase, effortQuestion, focusAction, ideasInOrbit } from '@/lib/strategy';
-
-/** Temporary: reaches the screens that have no entry point yet (and signs out until there is a profile screen). */
-const unreachedScreens: { href: Href; label: string }[] = [
-  { href: '/onboarding', label: '01 Görev tanımı' },
-];
 
 /** Görev — bugün (Figma 02): this week's push, the orbit, the week's steps and a proposal waiting. */
 export default function MissionScreen() {
@@ -92,7 +88,23 @@ export default function MissionScreen() {
         </Pressable>
       ) : null}
 
-      {plan ? (
+      {!goal.data ? (
+        <Card border="acid" style={{ gap: 12 }}>
+          <Txt variant="bodyStrong">Henüz bir görevin yok.</Txt>
+          <Txt variant="small" color="moonMid">
+            Tek bir varış noktası seç; rota, haftalar ve telemetri ona göre kurulur.
+          </Txt>
+          <Button label="Görevini tanımla" onPress={() => router.push('/onboarding')} />
+        </Card>
+      ) : !strategy.data ? (
+        <Card border="acid" style={{ gap: 12 }}>
+          <Txt variant="bodyStrong">Rotan henüz çizilmedi.</Txt>
+          <Txt variant="small" color="moonMid">
+            Varışa giden aşamaları ve yakıtın nasıl bölüneceğini belirle; haftalar buna göre planlanır.
+          </Txt>
+          <Button label="Rotayı çiz" onPress={() => router.push('/route/edit')} />
+        </Card>
+      ) : plan ? (
         <Steps isoWeek={plan.isoWeek} steps={steps} loading={actions.isPending} />
       ) : (
         <Card>
@@ -121,27 +133,14 @@ export default function MissionScreen() {
         </Link>
       ) : null}
 
-      <View style={{ gap: 8 }}>
-        <Txt variant="overline" color="moonFaint">
-          Geçici
-        </Txt>
-        {unreachedScreens.map(({ href, label }) => (
-          <Link key={label} href={href} asChild>
-            <Pressable>
-              <Txt variant="small" color="moonMid">
-                {label} ›
-              </Txt>
-            </Pressable>
-          </Link>
-        ))}
-        {config.data === 'live' ? (
-          <Pressable onPress={() => signOut()} accessibilityRole="button">
-            <Txt variant="small" color="moonMid">
-              Çıkış yap ›
-            </Txt>
-          </Pressable>
-        ) : null}
-      </View>
+      {/* Temporary: until there is a profile screen. */}
+      {config.data === 'live' ? (
+        <Pressable onPress={() => signOut()} accessibilityRole="button">
+          <Txt variant="small" color="moonMid">
+            Çıkış yap ›
+          </Txt>
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }

@@ -1,4 +1,14 @@
-import type { Action, EffortAllocation, EffortCategory, Evidence, Idea, Phase, StrategyVersion } from '@/api/types';
+import type {
+  Action,
+  EffortAllocation,
+  EffortCategory,
+  Evidence,
+  Idea,
+  KnowledgeStatus,
+  Phase,
+  StrategyVersion,
+} from '@/api/types';
+import type { PillTone } from '@/components';
 
 import { clauses, effortLabels } from './format';
 
@@ -101,3 +111,11 @@ export function samePhases(current: Phase[], revised: Pick<Phase, 'phaseKey' | '
 export function sameEffort(a: EffortAllocation, b: EffortAllocation): boolean {
   return (Object.keys(a) as EffortCategory[]).every((category) => a[category] === b[category]);
 }
+
+/** A knowledge item's status as a pill: "DOĞRULANMADI", "KISMEN"… */
+export const knowledgePills: Record<KnowledgeStatus, { label: string; tone: PillTone }> = {
+  UNVERIFIED: { label: 'Doğrulanmadı', tone: 'signal' },
+  PARTIAL: { label: 'Kısmen', tone: 'acid' },
+  VERIFIED: { label: 'Doğrulandı', tone: 'acid' },
+  FALSIFIED: { label: 'Yanlışlandı', tone: 'signal' },
+};

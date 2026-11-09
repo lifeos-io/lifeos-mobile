@@ -1,10 +1,10 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
 import { useStartMission } from '@/api/hooks';
-import { Button, Card, CheckIcon, PlusIcon, Screen, ScreenHeader, Txt } from '@/components';
+import { Button, Card, CheckIcon, Chips, PlusIcon, Screen, ScreenHeader, Txt } from '@/components';
 import { errorMessage } from '@/lib/errors';
-import { goBack } from '@/lib/navigation';
 import { colors, layout, typography } from '@/theme';
 
 /**
@@ -22,7 +22,8 @@ const CONSTRAINT_MAX = 500;
 
 /**
  * Görev tanımı — onboarding (Figma 01): one destination, its window and the constraints the route must respect.
- * Starting creates the goal, records each constraint as a known fact of it, and marks the profile onboarded.
+ * Starting creates the goal, records each constraint as a known fact of it, marks the profile onboarded and goes
+ * on to drawing the route.
  */
 export default function OnboardingScreen() {
   const start = useStartMission();
@@ -51,7 +52,8 @@ export default function OnboardingScreen() {
         },
         constraints,
       },
-      { onSuccess: () => goBack('/') },
+      // The goal has no route yet: drawing it is the next step.
+      { onSuccess: () => router.replace('/route/edit') },
     );
   };
 
@@ -86,30 +88,12 @@ export default function OnboardingScreen() {
         <Txt variant="overline" color="moonMid">
           Zaman penceresi
         </Txt>
-        <View style={{ flexDirection: 'row', gap: 8 }} accessibilityRole="radiogroup">
-          {windows.map((option, i) => {
-            const selected = window === i;
-            return (
-              <Pressable
-                key={option.label}
-                onPress={() => setWindow(i)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected }}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: selected ? colors.acid : colors.line,
-                  backgroundColor: selected ? colors.acid : 'transparent',
-                }}>
-                <Txt variant="micro" color={selected ? 'acidInk' : 'moonMid'}>
-                  {option.label.toLocaleUpperCase('tr-TR')}
-                </Txt>
-              </Pressable>
-            );
-          })}
-        </View>
+        <Chips
+          label="Zaman penceresi"
+          options={windows.map((option, i) => ({ value: i, label: option.label }))}
+          value={window}
+          onChange={setWindow}
+        />
       </View>
 
       <View style={{ gap: 8 }}>

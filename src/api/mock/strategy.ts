@@ -7,6 +7,8 @@ import {
   type ChangeProposal,
   type CompleteWeeklyReview,
   type CreateGoal,
+  type CreateKnowledgeItem,
+  type CreateStrategyVersion,
   type Decision,
   type Evidence,
   type Feedback,
@@ -76,16 +78,12 @@ export function createGoal(request: CreateGoal): Promise<Goal> {
 }
 
 /** POST /api/strategy/goals/{goalId}/knowledge-items → 201 */
-export function createKnowledgeItem(
-  goalId: Uuid,
-  item: Pick<KnowledgeItem, 'statement' | 'kind' | 'status' | 'external' | 'source'>,
-): Promise<KnowledgeItem> {
+export function createKnowledgeItem(goalId: Uuid, item: CreateKnowledgeItem): Promise<KnowledgeItem> {
   const now = new Date().toISOString();
   const created: KnowledgeItem = {
     id: randomId(),
     goalId,
     ...item,
-    howToVerify: null,
     verifiedAt: item.status === 'VERIFIED' ? now : null,
     version: 0,
     createdAt: now,
@@ -103,6 +101,50 @@ export function listGoals(): Promise<Goal[]> {
 /** GET /api/strategy/goals/{goalId}/strategy-versions/current */
 export function getCurrentStrategy(goalId: Uuid): Promise<StrategyVersion | null> {
   return respond(db.strategyVersions.find((v) => v.goalId === goalId && v.current) ?? null);
+}
+
+/**
+ * POST /api/strategy/goals/{goalId}/strategy-versions → 201: the goal's next version becomes current. Checks what
+ * Strategy checks (StrategyVersionServiceImpl.validate) with its error codes.
+ */
+export function createStrategyVersion(goalId: Uuid, request: CreateStrategyVersion): Promise<StrategyVersion> {
+  const goal = find(db.goals, goalId, 'Goal');
+  const versions = db.strategyVersions.filter((v) => v.goalId === goalId);
+  const current = versions.find((v) => v.current);
+  if ((current?.versionNo ?? null) !== request.expectedCurrentVersionNo) {
+    return Promise.reject(new ApiError('CONCURRENT_MODIFICATION', 'The strategy was revised in the meantime.'));
+  }
+  const total = Object.values(request.effortAllocation).reduce((sum, n) => sum + n, 0);
+  const carried = new Set(current?.phases.map((phase) => phase.phaseKey));
+  const invalid =
+    (current && !request.changeReason?.trim()) ||
+    total !== 100 ||
+    request.phases.filter((phase) => phase.status === 'ACTIVE').length > 1 ||
+    request.phases.some(
+      (phase) =>
+        (phase.phaseKey && !carried.has(phase.phaseKey)) ||
+        phase.endsOn < phase.startsOn ||
+        phase.startsOn < goal.windowStart ||
+        phase.endsOn > goal.windowEnd,
+    );
+  if (invalid) {
+    return Promise.reject(new ApiError('VALIDATION_FAILED', 'Request validation failed'));
+  }
+  const created: StrategyVersion = {
+    id: randomId(),
+    goalId,
+    versionNo: (current?.versionNo ?? 0) + 1,
+    summary: request.summary.trim(),
+    changeReason: request.changeReason?.trim() || 'İlk strateji.',
+    sourceProposalId: null,
+    current: true,
+    createdAt: new Date().toISOString(),
+    phases: request.phases.map((phase, i) => ({ ...phase, phaseKey: phase.phaseKey ?? randomId(), ordinal: i + 1 })),
+    effortAllocation: request.effortAllocation,
+  };
+  versions.forEach((v) => (v.current = false));
+  db.strategyVersions.push(created);
+  return respond(created);
 }
 
 /** GET /api/strategy/goals/{goalId}/knowledge-items */

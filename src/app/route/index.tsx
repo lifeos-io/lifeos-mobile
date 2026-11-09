@@ -1,13 +1,25 @@
-import { StyleSheet, View } from 'react-native';
+import { Link, router } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useCurrentStrategy, useEvidence, useKnowledgeItems, useMainGoal } from '@/api/hooks';
 import type { Evidence, KnowledgeItem, Phase } from '@/api/types';
-import { Card, LoadError, Loading, Pill, ProgressBar, Screen, ScreenHeader, Txt } from '@/components';
+import {
+  Button,
+  Card,
+  LoadError,
+  Loading,
+  Pill,
+  PlusIcon,
+  ProgressBar,
+  Screen,
+  ScreenHeader,
+  Txt,
+} from '@/components';
 import { clauses, daysBetween, longMonthRange, monthRange, today } from '@/lib/format';
-import { exitTelemetry } from '@/lib/strategy';
+import { exitTelemetry, knowledgePills } from '@/lib/strategy';
 import { colors } from '@/theme';
 
-/** Rota — the destination and its phases (Figma 03). */
+/** Rota — the destination, its phases and what it rests on: unknowns and assumptions (Figma 03). */
 export default function RouteScreen() {
   const goal = useMainGoal();
   const strategy = useCurrentStrategy(goal.data?.id);
@@ -31,9 +43,9 @@ export default function RouteScreen() {
     );
   }
 
-  const unknowns = (knowledge.data ?? []).filter(
-    (item) => item.kind === 'UNKNOWN' && item.external && item.status !== 'VERIFIED' && item.status !== 'FALSIFIED',
-  );
+  const open = (item: KnowledgeItem) => item.status !== 'VERIFIED' && item.status !== 'FALSIFIED';
+  const unknowns = (knowledge.data ?? []).filter((item) => item.kind === 'UNKNOWN' && open(item));
+  const assumptions = (knowledge.data ?? []).filter((item) => item.kind === 'ASSUMPTION');
 
   return (
     <Screen>
@@ -42,9 +54,39 @@ export default function RouteScreen() {
         overline="Varış noktası"
         title={goal.data.title}
         subtitle={`Pencere: ${longMonthRange(goal.data.windowStart, goal.data.windowEnd)} · senin hedefin, işverenin taahhüdü değil`}
+        aside={
+          strategy.data ? (
+            <Link href="/route/edit" asChild>
+              <Pressable hitSlop={8} accessibilityRole="button" accessibilityLabel="Rotayı düzelt">
+                <Txt variant="small" color="acid">
+                  Düzelt · v{strategy.data.versionNo}
+                </Txt>
+              </Pressable>
+            </Link>
+          ) : null
+        }
       />
-      {strategy.data ? <Timeline phases={strategy.data.phases} evidence={evidence.data ?? []} /> : null}
-      {unknowns.length > 0 ? <Unknowns items={unknowns} /> : null}
+      {strategy.data ? (
+        <Timeline phases={strategy.data.phases} evidence={evidence.data ?? []} />
+      ) : (
+        <Card border="acid" style={{ gap: 12 }}>
+          <Txt variant="bodyStrong">Henüz rota yok.</Txt>
+          <Txt variant="small" color="moonMid">
+            Varışa giden aşamaları, her birinin çıkış kanıtını ve yakıtın nasıl bölüneceğini çiz.
+          </Txt>
+          <Button label="Rotayı çiz" onPress={() => router.push('/route/edit')} />
+        </Card>
+      )}
+      <Unknowns items={unknowns} />
+      {assumptions.length > 0 ? <Assumptions items={assumptions} /> : null}
+      <Link href="/route/unknown" asChild>
+        <Pressable
+          accessibilityRole="button"
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4, paddingHorizontal: 4 }}>
+          <PlusIcon size={16} color="acid" />
+          <Txt color="acid">Bilinmeyen ya da varsayım ekle</Txt>
+        </Pressable>
+      </Link>
     </Screen>
   );
 }
@@ -97,22 +139,25 @@ function ActivePhase({ phase, evidence }: { phase: Phase; evidence: Evidence[] }
         {phase.title}
       </Txt>
       <Txt variant="small" color="moonMid">
-        Çıkış kanıtı: {criteria.join('; ')}.
+        {criteria.length ? `Çıkış kanıtı: ${criteria.join('; ')}.` : 'Çıkış kanıtı henüz yazılmadı.'}
       </Txt>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ flex: 1 }}>
-          <ProgressBar value={needed ? met / needed : 0} />
+      {needed > 0 ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <ProgressBar value={met / needed} />
+          </View>
+          <Txt variant="small" color="moonMid">
+            {met}/{needed} telemetri
+          </Txt>
         </View>
-        <Txt variant="small" color="moonMid">
-          {met}/{needed} telemetri
-        </Txt>
-      </View>
+      ) : null}
     </Card>
   );
 }
 
 function OtherPhase({ phase }: { phase: Phase }) {
   const done = phase.status === 'DONE';
+  const criteria = clauses(phase.exitCriteria);
   return (
     <View style={{ gap: 4, opacity: done ? 0.6 : 1 }}>
       <Txt variant="small" color="moonMid">
@@ -120,19 +165,34 @@ function OtherPhase({ phase }: { phase: Phase }) {
         {done ? ' · tamamlandı' : ''}
       </Txt>
       <Txt variant="cardTitle">{phase.title}</Txt>
-      <Txt variant="small" color="moonMid">
-        {clauses(phase.exitCriteria).join('; ')}.
-      </Txt>
+      {criteria.length ? (
+        <Txt variant="small" color="moonMid">
+          {criteria.join('; ')}.
+        </Txt>
+      ) : null}
     </View>
   );
 }
 
+/** The open unknowns; the ones outside the user's control in sinyal. */
 function Unknowns({ items }: { items: KnowledgeItem[] }) {
+  if (items.length === 0) {
+    return (
+      <Card style={{ gap: 4 }}>
+        <Txt variant="overline" color="moonMid">
+          Bilinmeyenler
+        </Txt>
+        <Txt variant="small" color="moonMid">
+          Henüz yok. Rotanı etkileyen ama cevabını bilmediğin bir soru varsa ekle.
+        </Txt>
+      </Card>
+    );
+  }
   return (
     <Card style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Txt variant="overline" color="moonMid">
-          Bilinmeyenler · dış
+          Bilinmeyenler
         </Txt>
         <View style={styles.count} accessibilityLabel={`${items.length} bilinmeyen`}>
           <Txt variant="micro" color="signalInk">
@@ -142,10 +202,35 @@ function Unknowns({ items }: { items: KnowledgeItem[] }) {
       </View>
       {items.map((item) => (
         <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={[styles.bullet, { backgroundColor: colors.signal }]} />
+          <View style={[styles.bullet, { backgroundColor: item.external ? colors.signal : colors.nebula }]} />
           <Txt style={{ flex: 1 }}>{item.statement}</Txt>
+          {item.external ? (
+            <Txt variant="micro" color="moonFaint">
+              DIŞ
+            </Txt>
+          ) : null}
         </View>
       ))}
+    </Card>
+  );
+}
+
+/** What the route takes as true without having checked it, with where each stands. */
+function Assumptions({ items }: { items: KnowledgeItem[] }) {
+  return (
+    <Card style={{ gap: 12 }}>
+      <Txt variant="overline" color="moonMid">
+        Varsayımlar
+      </Txt>
+      {items.map((item) => {
+        const pill = knowledgePills[item.status];
+        return (
+          <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Txt style={{ flex: 1 }}>{item.statement}</Txt>
+            <Pill label={pill.label} tone={pill.tone} />
+          </View>
+        );
+      })}
     </Card>
   );
 }

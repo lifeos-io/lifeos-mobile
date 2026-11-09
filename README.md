@@ -49,8 +49,9 @@ Keycloak must accept it as the issuer.
 ```
 src/app/            routes (Expo Router)
   (tabs)/           Görev (index), Uydular (ideas), Telemetri (evidence), Kule (coach)
-  onboarding.tsx    route.tsx  proposals/[id]  ideas/[id]  decisions/[id]  review/ (index, plan)
-src/components/     the design system: Txt, Card, Pill, Button, ProgressBar, ScreenHeader, Screen, TabBar, icons
+  onboarding.tsx    route/ (index, edit, unknown)  proposals/[id]  ideas/[id]  decisions/[id]  review/ (index, plan)
+src/components/     the design system: Txt, Card, Pill, Button, Field, Chips/Toggle/Stepper, ProgressBar, ScreenHeader,
+                    Screen, TabBar, icons
 src/theme/          color tokens, text styles, spacing
 src/api/            data access: strategy.ts/coach.ts pick mock/ or live/; types, hooks, the React Query client
 src/auth/           Keycloak session (sign-in, refresh, sign-out) and the sign-in screen

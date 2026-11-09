@@ -5,6 +5,8 @@ import type {
   ChangeProposal,
   CompleteWeeklyReview,
   CreateGoal,
+  CreateKnowledgeItem,
+  CreateStrategyVersion,
   Decision,
   Evidence,
   Feedback,
@@ -38,11 +40,12 @@ export function createGoal(goal: CreateGoal): Promise<Goal> {
   return request('POST', `${S}/goals`, { body: goal });
 }
 
-export function createKnowledgeItem(
-  goalId: Uuid,
-  item: Pick<KnowledgeItem, 'statement' | 'kind' | 'status' | 'external' | 'source'>,
-): Promise<KnowledgeItem> {
+export function createKnowledgeItem(goalId: Uuid, item: CreateKnowledgeItem): Promise<KnowledgeItem> {
   return request('POST', `${S}/goals/${q(goalId)}/knowledge-items`, { body: item });
+}
+
+export function createStrategyVersion(goalId: Uuid, version: CreateStrategyVersion): Promise<StrategyVersion> {
+  return request('POST', `${S}/goals/${q(goalId)}/strategy-versions`, { body: version });
 }
 
 export function listGoals(): Promise<Goal[]> {
