@@ -1,6 +1,7 @@
 import type {
   Action,
   ChangeProposal,
+  Decision,
   Evidence,
   Feedback,
   Goal,
@@ -185,23 +186,138 @@ export const feedback: Feedback[] = [
   },
 ];
 
-export const ideas: Idea[] = [
-  { title: 'AI Engineering', note: 'Kaynak: direktörün sözlü yorumu', status: 'ACTIVE' as const },
-  { title: 'Yük testi AI triage pilotu', note: 'Aşama 3 ile uyumlu · ihtiyaç doğrulanmadı', status: 'INBOX' as const },
-  { title: 'Kubernetes', note: 'İş ihtiyacı doğrulanmadı', status: 'SHELVED' as const },
-  { title: 'Kafka Streams', note: 'Hedefe bağı zayıf', status: 'SHELVED' as const },
-].map((idea, i) => ({
+type IdeaSeed = Pick<Idea, 'title' | 'note' | 'status'> & {
+  createdAt: string;
+  evaluation?: Omit<Idea['evaluations'][number], 'evaluatedAt'>;
+};
+
+const ideaSeeds: IdeaSeed[] = [
+  {
+    title: 'AI Engineering',
+    note: 'Direktörün sözlü yorumu; somut gereksinim değil (henüz).',
+    status: 'INBOX',
+    createdAt: '2026-11-06T17:00:00Z',
+    evaluation: {
+      goalFit: 3,
+      evidencePotential: 3,
+      energy: 2,
+      weeklyMinutes: 120,
+      verdict: 'PURSUE',
+      note: 'Rotaya alınmaz. Tek bir soruya cevap aranır: ekipte AI hangi somut problem için konuşuluyor, sahibi kim? Sonra yer kontrolünde yeniden bakılır.',
+    },
+  },
+  {
+    title: 'Yük testi AI triage pilotu',
+    note: 'Aşama 3 ile uyumlu · ihtiyaç doğrulanmadı',
+    status: 'INBOX',
+    createdAt: '2026-11-07T20:00:00Z',
+  },
+  {
+    title: 'Kubernetes',
+    note: 'İş ihtiyacı doğrulanmadı · 29 Kas',
+    status: 'SHELVED',
+    createdAt: '2026-10-22T19:00:00Z',
+    evaluation: {
+      goalFit: 2,
+      evidencePotential: 2,
+      energy: 4,
+      weeklyMinutes: 180,
+      verdict: 'PARK',
+      note: 'Ekibin işi şu an K8s gerektirmiyor; 29 Kasım değerlendirmesine kadar park.',
+    },
+  },
+  {
+    title: 'Kafka Streams',
+    note: 'Hedefe bağı zayıf',
+    status: 'SHELVED',
+    createdAt: '2026-10-28T21:00:00Z',
+    evaluation: {
+      goalFit: 1,
+      evidencePotential: 2,
+      energy: 3,
+      weeklyMinutes: 120,
+      verdict: 'PARK',
+      note: 'Hedefe bağı zayıf; yer kontrolünde yeniden bakılmaz.',
+    },
+  },
+];
+
+export const ideas: Idea[] = ideaSeeds.map(({ evaluation, ...idea }, i) => ({
   ...idea,
   id: `019a6b10-0000-7000-8000-00000000070${i + 1}`,
   goalId: GOAL,
-  evaluations: [],
-  activatedAt: idea.status === 'ACTIVE' ? '2026-11-08T10:00:00Z' : null,
+  evaluations: evaluation ? [{ ...evaluation, evaluatedAt: '2026-11-08T10:00:00Z' }] : [],
+  activatedAt: null,
   closedAt: null,
   promotedGoalId: null,
-  version: 1,
-  createdAt: '2026-10-25T10:00:00Z',
+  version: evaluation ? 2 : 0,
   updatedAt: '2026-11-08T10:00:00Z',
 }));
+
+export const ASSUMPTIONS = {
+  noK8sNeed: '019a6b10-0000-7000-8000-000000000511',
+  oauthDaily: '019a6b10-0000-7000-8000-000000000512',
+  directorRemark: '019a6b10-0000-7000-8000-000000000513',
+};
+
+knowledgeItems.push(
+  ...(
+    [
+      [ASSUMPTIONS.noK8sNeed, 'Ekibin işi şu an K8s gerektirmiyor', 'UNVERIFIED'],
+      [ASSUMPTIONS.oauthDaily, 'OAuth 2.0 günlük işte kullanılıyor', 'PARTIAL'],
+      [ASSUMPTIONS.directorRemark, 'Direktörün yorumu somut gereksinim değil', 'UNVERIFIED'],
+    ] as const
+  ).map(([id, statement, status]) => ({
+    id,
+    goalId: GOAL,
+    statement,
+    kind: 'ASSUMPTION' as const,
+    status,
+    external: false,
+    source: null,
+    howToVerify: null,
+    verifiedAt: null,
+    version: status === 'PARTIAL' ? 1 : 0,
+    createdAt: '2026-11-08T09:00:00Z',
+    updatedAt: '2026-11-08T09:00:00Z',
+  })),
+);
+
+export const decisions: Decision[] = [
+  {
+    id: '019a6b10-0000-7000-8000-000000000a01',
+    goalId: GOAL,
+    title: "Kubernetes'i park et, OAuth 2.0'a odaklan",
+    context: 'Direktör AI’ın önemli olduğunu söyledi; K8s’e ayrılan akşamlar aşama 1’in kanıtına katkı vermiyor.',
+    status: 'OPEN',
+    alternatives: [
+      { label: 'A', description: "K8s'e devam", chosen: false, rejectionReason: 'Elendi · ihtiyaç doğrulanmadı' },
+      { label: 'B', description: "Tamamen AI'a geç", chosen: false, rejectionReason: 'Elendi · sinyal somut değil' },
+      { label: 'C', description: 'OAuth 2.0 / ÖHVPS', chosen: true, rejectionReason: null },
+      { label: 'D', description: 'AI keşfi · 2 sa', chosen: false, rejectionReason: "C'ye eklendi" },
+    ],
+    assumptionIds: [ASSUMPTIONS.noK8sNeed, ASSUMPTIONS.oauthDaily, ASSUMPTIONS.directorRemark],
+    reopenTriggers: [
+      { kind: 'DATE', description: 'İlk kontrol', eventType: null, firesOn: '2026-11-15', firedAt: null },
+      { kind: 'DATE', description: 'İkinci kontrol', eventType: null, firesOn: '2026-11-22', firedAt: null },
+    ],
+    expectedOutcome:
+      "29 Kasım'a kadar rıza akışını kendi kodumuzda bulup açıklayabilmek ve bir PR'da güvenlikle ilgili gerekçeli yorum yapmak.",
+    decidedAt: '2026-11-08T11:00:00Z',
+    reviewOn: '2026-11-29',
+    outcomeNote: null,
+    wouldDecideAgain: null,
+    closedAt: null,
+    reopenedFromId: null,
+    reopenReason: null,
+    reopenedAsId: null,
+    supersededAt: null,
+    falsifiedAssumptionIds: [],
+    version: 1,
+    createdAt: '2026-11-08T10:30:00Z',
+    updatedAt: '2026-11-08T11:00:00Z',
+  },
+];
 
 export const evidence: Evidence[] = [];
 

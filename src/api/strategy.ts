@@ -1,18 +1,20 @@
 import * as db from './mock/db';
 import { respond } from './mock/respond';
-import type {
-  Action,
-  ActionStatus,
-  ChangeProposal,
-  Evidence,
-  Feedback,
-  Goal,
-  Idea,
-  KnowledgeItem,
-  ProposalStatus,
-  StrategyVersion,
-  Uuid,
-  WeeklyPlan,
+import {
+  ApiError,
+  type Action,
+  type ActionStatus,
+  type ChangeProposal,
+  type Decision,
+  type Evidence,
+  type Feedback,
+  type Goal,
+  type Idea,
+  type KnowledgeItem,
+  type ProposalStatus,
+  type StrategyVersion,
+  type Uuid,
+  type WeeklyPlan,
 } from './types';
 
 /*
@@ -94,6 +96,77 @@ export function listEvidence(goalId?: Uuid): Promise<Evidence[]> {
 /** GET /api/strategy/ideas */
 export function listIdeas(): Promise<Idea[]> {
   return respond(db.ideas);
+}
+
+/** GET /api/strategy/ideas/{ideaId} */
+export function getIdea(ideaId: Uuid): Promise<Idea> {
+  return respond(find(db.ideas, ideaId, 'Idea'));
+}
+
+/** POST /api/strategy/ideas {title, note, goalId} → 201 */
+export function captureIdea(title: string, note: string | null, goalId: Uuid | null): Promise<Idea> {
+  const now = new Date().toISOString();
+  const idea: Idea = {
+    id: randomId(),
+    goalId,
+    title,
+    note,
+    status: 'INBOX',
+    evaluations: [],
+    activatedAt: null,
+    closedAt: null,
+    promotedGoalId: null,
+    version: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.ideas.unshift(idea);
+  return respond(idea);
+}
+
+export type IdeaTransition = 'activate' | 'shelve' | 'reopen' | 'drop';
+
+const transitions: Record<IdeaTransition, { from: Idea['status'][]; to: Idea['status'] }> = {
+  activate: { from: ['INBOX', 'SHELVED'], to: 'ACTIVE' },
+  shelve: { from: ['INBOX', 'ACTIVE'], to: 'SHELVED' },
+  reopen: { from: ['SHELVED'], to: 'INBOX' },
+  drop: { from: ['INBOX', 'ACTIVE', 'SHELVED'], to: 'DROPPED' },
+};
+
+/** POST /api/strategy/ideas/{ideaId}/activate|shelve|reopen|drop, with Strategy's rules and 409 codes. */
+export function changeIdea(ideaId: Uuid, transition: IdeaTransition): Promise<Idea> {
+  const idea = find(db.ideas, ideaId, 'Idea');
+  const { from, to } = transitions[transition];
+  if (!from.includes(idea.status)) {
+    return Promise.reject(new ApiError('STRATEGY_IDEA_STATUS', `Idea is ${idea.status}.`));
+  }
+  if (transition === 'activate') {
+    if (idea.evaluations.at(-1)?.verdict !== 'PURSUE') {
+      return Promise.reject(new ApiError('STRATEGY_IDEA_NOT_PURSUED', 'Latest verdict is not PURSUE.'));
+    }
+    if (db.ideas.filter((other) => other.status === 'ACTIVE').length >= 2) {
+      return Promise.reject(new ApiError('STRATEGY_ACTIVE_IDEA_LIMIT', 'At most 2 active ideas.'));
+    }
+  }
+  const now = new Date().toISOString();
+  Object.assign(idea, {
+    status: to,
+    activatedAt: transition === 'activate' ? now : idea.activatedAt,
+    closedAt: to === 'DROPPED' ? now : null,
+    version: idea.version + 1,
+    updatedAt: now,
+  });
+  return respond(idea);
+}
+
+/** GET /api/strategy/decisions */
+export function listDecisions(): Promise<Decision[]> {
+  return respond(db.decisions);
+}
+
+/** GET /api/strategy/decisions/{decisionId} */
+export function getDecision(decisionId: Uuid): Promise<Decision> {
+  return respond(find(db.decisions, decisionId, 'Decision'));
 }
 
 /** GET /api/strategy/proposals?status= */

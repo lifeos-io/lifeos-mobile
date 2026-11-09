@@ -30,8 +30,6 @@ import { activePhase, effortQuestion, focusAction, ideasInOrbit } from '@/lib/st
 /** Temporary: reaches the screens that have no entry point yet. */
 const unreachedScreens: { href: Href; label: string }[] = [
   { href: '/onboarding', label: '01 Görev tanımı' },
-  { href: '/ideas/demo', label: '06 Uydu değerlendirmesi' },
-  { href: '/decisions/demo', label: '07 Manevra kaydı' },
   { href: '/review', label: '09 Yer kontrolü' },
 ];
 

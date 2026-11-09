@@ -1,11 +1,10 @@
-import { router } from 'expo-router';
-
 import { Button, Placeholder, Screen, ScreenHeader } from '@/components';
+import { goBack } from '@/lib/navigation';
 
 /** Görev tanımı — onboarding (Figma 01). */
 export default function OnboardingScreen() {
   return (
-    <Screen footer={<Button label="Görevi başlat" onPress={() => router.back()} />}>
+    <Screen footer={<Button label="Görevi başlat" onPress={() => goBack()} />}>
       <ScreenHeader
         back
         overline="Görev tanımı"

@@ -1,7 +1,8 @@
-import { router } from 'expo-router';
+import type { Href } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { goBack } from '@/lib/navigation';
 import { colors, type ColorToken } from '@/theme';
 
 import { ChevronLeftIcon } from './icons';
@@ -15,6 +16,8 @@ type ScreenHeaderProps = {
   accent?: ColorToken;
   /** Shows the round back button left of the overline. */
   back?: boolean;
+  /** Where back goes when there is no previous screen (opened from a link). */
+  fallback?: Href;
   /** Right of the overline: "~10 dk", the + button. */
   aside?: ReactNode;
   /** Right of the title: the fuel counter on Görev. */
@@ -27,6 +30,7 @@ export function ScreenHeader({
   subtitle,
   accent = 'acid',
   back = false,
+  fallback = '/',
   aside,
   titleAside,
 }: ScreenHeaderProps) {
@@ -37,7 +41,7 @@ export function ScreenHeader({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Geri"
-            onPress={() => router.back()}
+            onPress={() => goBack(fallback)}
             hitSlop={8}
             style={{
               width: 40,

@@ -179,6 +179,51 @@ export type Evidence = {
   createdAt: Instant;
 };
 
+// decision/dto/DecisionResponse
+export type DecisionStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'SUPERSEDED';
+
+export type Decision = {
+  id: Uuid;
+  goalId: Uuid | null;
+  title: string;
+  context: string | null;
+  status: DecisionStatus;
+  alternatives: { label: string; description: string; chosen: boolean; rejectionReason: string | null }[];
+  assumptionIds: Uuid[];
+  reopenTriggers: {
+    kind: 'DATE';
+    description: string;
+    eventType: string | null;
+    firesOn: LocalDate | null;
+    firedAt: Instant | null;
+  }[];
+  expectedOutcome: string | null;
+  decidedAt: Instant | null;
+  reviewOn: LocalDate | null;
+  outcomeNote: string | null;
+  wouldDecideAgain: 'YES' | 'NO' | null;
+  closedAt: Instant | null;
+  reopenedFromId: Uuid | null;
+  reopenReason: string | null;
+  reopenedAsId: Uuid | null;
+  supersededAt: Instant | null;
+  /** Assumptions found false since the decision (computed on read). */
+  falsifiedAssumptionIds: Uuid[];
+  version: number;
+  createdAt: Instant;
+  updatedAt: Instant;
+};
+
+/** A 409 from Strategy: `code` is the problem detail's error code, e.g. "STRATEGY_ACTIVE_IDEA_LIMIT". */
+export class ApiError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 // proposal/dto/ChangeProposalResponse
 export type ProposalStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED';
 export type ProposalSourceType = 'FEEDBACK' | 'EVIDENCE' | 'WEEKLY_REVIEW' | 'DECISION' | 'KNOWLEDGE_ITEM';

@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Alert, View } from 'react-native';
 
 import { useCurrentStrategy, useDecideProposal, useFeedback, useProposal } from '@/api/hooks';
@@ -18,6 +18,7 @@ import {
 } from '@/components';
 import { dayMonth } from '@/lib/format';
 import { addedCriteria, sameEffort, samePhases } from '@/lib/strategy';
+import { goBack } from '@/lib/navigation';
 
 const sourceKinds: Record<Feedback['sourceKind'], string> = {
   MANAGER: 'yönetici',
@@ -63,7 +64,7 @@ export default function ProposalScreen() {
   const keepsEffort = base ? sameEffort(base.effortAllocation, p.revision.effortAllocation) : false;
   const title = `Hedef aynı. ${keepsEffort ? 'Aşamalar' : 'Ağırlıklar'} değişiyor.`;
 
-  const onDecided = () => router.back();
+  const onDecided = () => goBack();
   const reject = () =>
     Alert.alert('Rota düzeltmesini reddet', 'Kule bu öneriyi kapatır; mevcut rota aynen kalır.', [
       { text: 'Vazgeç', style: 'cancel' },

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, layout } from '@/theme';
@@ -17,8 +17,11 @@ export function Screen({ children, tab = false, footer }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const bottom = tab ? layout.tabBarClearance : footer ? layout.section : insets.bottom + layout.section;
   return (
-    <View style={{ flex: 1, backgroundColor: colors.space }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1, backgroundColor: colors.space }}>
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           paddingTop: insets.top + layout.top,
           paddingHorizontal: layout.gutter,
@@ -33,6 +36,6 @@ export function Screen({ children, tab = false, footer }: ScreenProps) {
           {footer}
         </View>
       ) : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 }

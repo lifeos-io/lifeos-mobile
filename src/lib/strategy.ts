@@ -29,17 +29,31 @@ export function focusAction(actions: Action[]): Action | undefined {
 }
 
 const ideaOrder: Partial<Record<Idea['status'], number>> = { ACTIVE: 0, INBOX: 1, SHELVED: 2 };
-const ideaSuffix: Partial<Record<Idea['status'], string>> = { ACTIVE: 'keşif', SHELVED: 'park' };
 
-/** Ideas still in orbit (not dropped or promoted), active first, as orbit labels: "AI Engineering · keşif". */
-export function ideasInOrbit(ideas: Idea[]): { key: string; label: string }[] {
+/** Ideas still in orbit (not dropped or promoted). */
+export function inOrbit(ideas: Idea[]): Idea[] {
   return ideas
     .filter((idea) => ideaOrder[idea.status] !== undefined)
-    .sort((a, b) => ideaOrder[a.status]! - ideaOrder[b.status]!)
-    .map((idea) => ({
-      key: idea.id,
-      label: [shortTitle(idea.title), ideaSuffix[idea.status]].filter(Boolean).join(' · '),
-    }));
+    .sort((a, b) => ideaOrder[a.status]! - ideaOrder[b.status]! || pursued(b) - pursued(a));
+}
+
+function pursued(idea: Idea): number {
+  return idea.evaluations.at(-1)?.verdict === 'PURSUE' ? 1 : 0;
+}
+
+/** Where an idea stands, in a word: "aktif", "keşif" (pursue proposed), "park"; nothing while unevaluated. */
+export function ideaStance(idea: Idea): 'aktif' | 'keşif' | 'park' | undefined {
+  if (idea.status === 'ACTIVE') return 'aktif';
+  if (idea.status === 'SHELVED') return 'park';
+  return idea.evaluations.at(-1)?.verdict === 'PURSUE' ? 'keşif' : undefined;
+}
+
+/** Ideas in orbit as orbit labels: "AI Engineering · keşif". */
+export function ideasInOrbit(ideas: Idea[]): { key: string; label: string }[] {
+  return inOrbit(ideas).map((idea) => ({
+    key: idea.id,
+    label: [shortTitle(idea.title), ideaStance(idea)].filter(Boolean).join(' · '),
+  }));
 }
 
 function shortTitle(title: string): string {

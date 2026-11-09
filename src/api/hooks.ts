@@ -13,6 +13,9 @@ export const keys = {
   feedback: (id: Uuid) => ['feedback', id] as const,
   evidence: (goalId: Uuid) => ['evidence', goalId] as const,
   ideas: ['ideas'] as const,
+  idea: (id: Uuid) => ['ideas', id] as const,
+  decisions: ['decisions'] as const,
+  decision: (id: Uuid) => ['decisions', id] as const,
   proposals: ['proposals'] as const,
   proposal: (id: Uuid) => ['proposals', id] as const,
 };
@@ -86,6 +89,45 @@ export function useEvidence(goalId: Uuid | undefined) {
 
 export function useIdeas() {
   return useQuery({ queryKey: keys.ideas, queryFn: strategy.listIdeas });
+}
+
+export function useIdea(id: Uuid) {
+  return useQuery({ queryKey: keys.idea(id), queryFn: () => strategy.getIdea(id) });
+}
+
+export function useCaptureIdea() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ title, note, goalId }: { title: string; note: string | null; goalId: Uuid | null }) =>
+      strategy.captureIdea(title, note, goalId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.ideas }),
+  });
+}
+
+export function useChangeIdea(id: Uuid) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (transition: strategy.IdeaTransition) => strategy.changeIdea(id, transition),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: keys.ideas }),
+  });
+}
+
+/** Knowledge items by ID, for a decision's assumptions. */
+export function useKnowledgeById(goalId: Uuid | null | undefined) {
+  return useQuery({
+    queryKey: keys.knowledge(goalId ?? ''),
+    queryFn: () => strategy.listKnowledgeItems(goalId!),
+    enabled: !!goalId,
+    select: (items) => new Map(items.map((item) => [item.id, item])),
+  });
+}
+
+export function useDecisions() {
+  return useQuery({ queryKey: keys.decisions, queryFn: strategy.listDecisions });
+}
+
+export function useDecision(id: Uuid) {
+  return useQuery({ queryKey: keys.decision(id), queryFn: () => strategy.getDecision(id) });
 }
 
 export function usePendingProposals() {
