@@ -1,8 +1,43 @@
-target/
-*.class
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# generated native folders (Continuous Native Generation)
+/ios
+/android
+
+# Native secrets
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
 *.log
+
+# typescript
+*.tsbuildinfo
+
+# local env files
+.env
+.env*.local
+
+# editors / OS
 .idea/
-*.iml
 .vscode/
 .DS_Store
-.env
