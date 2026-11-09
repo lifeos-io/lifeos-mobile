@@ -1,10 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import * as coach from './coach';
 import * as strategy from './strategy';
-import type { Action, ActionStatus, CompleteWeeklyReview, Uuid } from './types';
+import type { Action, ActionStatus, CompleteWeeklyReview, CreateGoal, Uuid } from './types';
 
 /** Query keys, one per endpoint. */
 export const keys = {
+  profile: ['me'] as const,
+  conversations: ['conversations'] as const,
+  messages: (conversationId: Uuid) => ['conversations', conversationId, 'messages'] as const,
   goals: ['goals'] as const,
   currentStrategy: (goalId: Uuid) => ['goals', goalId, 'strategy', 'current'] as const,
   knowledge: (goalId: Uuid) => ['goals', goalId, 'knowledge'] as const,
@@ -172,3 +177,89 @@ export function useCompleteReview(isoWeek: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.weeklyPlans }),
   });
 }
+
+export function useProfile() {
+  return useQuery({ queryKey: keys.profile, queryFn: strategy.getProfile });
+}
+
+/**
+ * Onboarding's "Görevi başlat": the goal, its constraints as known facts of the goal (so Coach sees them), then
+ * the profile marked onboarded.
+ */
+export function useStartMission() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ goal, constraints }: { goal: CreateGoal; constraints: string[] }) => {
+      const created = await strategy.createGoal(goal);
+      for (const statement of constraints) {
+        await strategy.createKnowledgeItem(created.id, {
+          statement,
+          kind: 'FACT',
+          status: 'VERIFIED',
+          external: false,
+          source: 'Kısıt',
+        });
+      }
+      await strategy.updateProfile({ onboardingCompleted: true });
+      return created;
+    },
+    onSuccess: () => queryClient.invalidateQueries(),
+  });
+}
+
+/** The conversation Kule shows: the most recently active one, started when there is none. */
+export function useCurrentConversation() {
+  return useQuery({
+    queryKey: keys.conversations,
+    queryFn: async () => (await coach.listConversations())[0] ?? (await coach.startConversation()),
+  });
+}
+
+export function useMessages(conversationId: Uuid | undefined) {
+  return useQuery({
+    queryKey: keys.messages(conversationId ?? ''),
+    queryFn: () => coach.listMessages(conversationId!),
+    enabled: !!conversationId,
+  });
+}
+
+/**
+ * Sending to Kule: the user's message shows at once, the answer grows as its pieces arrive, and the stored
+ * messages replace both when it is done. `stop` abandons the answer (nothing is stored for it).
+ */
+export function useChat(conversationId: Uuid | undefined) {
+  const queryClient = useQueryClient();
+  const [pending, setPending] = useState<{ question: string; answer: string } | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const abort = useRef<AbortController | null>(null);
+
+  useEffect(() => () => abort.current?.abort(), []);
+
+  const send = useCallback(
+    async (content: string) => {
+      if (!conversationId || abort.current) return;
+      const controller = new AbortController();
+      abort.current = controller;
+      setError(null);
+      setPending({ question: content, answer: '' });
+      try {
+        await coach.sendMessage(conversationId, content, {
+          signal: controller.signal,
+          onDelta: (text) => setPending((current) => current && { ...current, answer: current.answer + text }),
+        });
+      } catch (e) {
+        setError(e);
+      } finally {
+        abort.current = null;
+        await queryClient.invalidateQueries({ queryKey: keys.messages(conversationId) });
+        setPending(null);
+      }
+    },
+    [conversationId, queryClient],
+  );
+
+  const stop = useCallback(() => abort.current?.abort(), []);
+
+  return { send, stop, pending, error, streaming: pending !== null };
+}
+

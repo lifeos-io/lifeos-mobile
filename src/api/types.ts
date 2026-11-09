@@ -285,3 +285,35 @@ export type ChangeProposal = {
   appliedStrategyVersionId: Uuid | null;
   createdAt: Instant;
 };
+
+// profile/dto/ProfileResponse
+export type Profile = {
+  userId: Uuid;
+  displayName: string | null;
+  timezone: string;
+  locale: string;
+  defaultWeeklyMinutes: number;
+  onboardingCompleted: boolean;
+  onboardingCompletedAt: Instant | null;
+};
+
+// goal/dto/CreateGoalRequest
+export type CreateGoal = {
+  title: string;
+  domain: GoalDomain;
+  whyItMatters: string | null;
+  successDefinition: string | null;
+  windowStart: LocalDate;
+  windowEnd: LocalDate;
+};
+
+/*
+ * Coach service (`lifeos-coach-service`, conversation/dto): conversations and their messages. Sending a message
+ * answers with a server-sent event stream: `delta` {text} pieces, then `done` with the stored MessageResponse, or
+ * `error` {code, detail}.
+ */
+export type Conversation = { id: Uuid; title: string; createdAt: Instant; updatedAt: Instant };
+
+export type MessageRole = 'USER' | 'ASSISTANT';
+
+export type Message = { id: Uuid; role: MessageRole; content: string; createdAt: Instant };

@@ -7,6 +7,7 @@ import type {
   Goal,
   Idea,
   KnowledgeItem,
+  Profile,
   StrategyVersion,
   WeeklyPlan,
   WeeklyReview,
@@ -29,6 +30,16 @@ export const PHASE_KEYS = {
 const FEEDBACK_DOMAIN = '019a6b10-0000-7000-8000-000000000401';
 
 const created = '2026-11-01T08:00:00Z';
+
+export const profile: Profile = {
+  userId: '019a6b10-0000-7000-8000-000000000000',
+  displayName: 'Onurcan',
+  timezone: 'Europe/Istanbul',
+  locale: 'tr-TR',
+  defaultWeeklyMinutes: 240,
+  onboardingCompleted: true,
+  onboardingCompletedAt: created,
+};
 
 export const goals: Goal[] = [
   {

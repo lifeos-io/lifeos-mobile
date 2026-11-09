@@ -6,6 +6,7 @@ import {
   type ActionStatus,
   type ChangeProposal,
   type CompleteWeeklyReview,
+  type CreateGoal,
   type Decision,
   type Evidence,
   type Feedback,
@@ -13,6 +14,7 @@ import {
   type Idea,
   type KnowledgeItem,
   type LocalDate,
+  type Profile,
   type ProposalStatus,
   type StrategyVersion,
   type Uuid,
@@ -39,6 +41,58 @@ function find<T extends { id: Uuid }>(items: T[], id: Uuid, what: string): T {
 function randomId(): Uuid {
   const hex = () => Math.floor(Math.random() * 16).toString(16);
   return 'xxxxxxxx-xxxx-7xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, hex);
+}
+
+/** GET /api/strategy/me */
+export function getProfile(): Promise<Profile> {
+  return respond(db.profile);
+}
+
+/** PATCH /api/strategy/me {onboardingCompleted, …} */
+export function updateProfile(changes: Partial<Pick<Profile, 'displayName' | 'onboardingCompleted'>>): Promise<Profile> {
+  Object.assign(db.profile, changes);
+  if (changes.onboardingCompleted && !db.profile.onboardingCompletedAt) {
+    db.profile.onboardingCompletedAt = new Date().toISOString();
+  }
+  return respond(db.profile);
+}
+
+/** POST /api/strategy/goals → 201; a new goal goes last in the priority order. */
+export function createGoal(request: CreateGoal): Promise<Goal> {
+  const now = new Date().toISOString();
+  const goal: Goal = {
+    id: randomId(),
+    ...request,
+    whyItMatters: request.whyItMatters ?? '',
+    successDefinition: request.successDefinition ?? '',
+    status: 'ACTIVE',
+    priority: db.goals.length + 1,
+    version: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.goals.push(goal);
+  return respond(goal);
+}
+
+/** POST /api/strategy/goals/{goalId}/knowledge-items → 201 */
+export function createKnowledgeItem(
+  goalId: Uuid,
+  item: Pick<KnowledgeItem, 'statement' | 'kind' | 'status' | 'external' | 'source'>,
+): Promise<KnowledgeItem> {
+  const now = new Date().toISOString();
+  const created: KnowledgeItem = {
+    id: randomId(),
+    goalId,
+    ...item,
+    howToVerify: null,
+    verifiedAt: item.status === 'VERIFIED' ? now : null,
+    version: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.knowledgeItems.push(created);
+  return respond(created);
 }
 
 /** GET /api/strategy/goals */
