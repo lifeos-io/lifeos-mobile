@@ -15,11 +15,21 @@ type ScreenHeaderProps = {
   accent?: ColorToken;
   /** Shows the round back button left of the overline. */
   back?: boolean;
-  /** Right of the overline or the title: "~10 dk", the fuel counter, the + button. */
+  /** Right of the overline: "~10 dk", the + button. */
   aside?: ReactNode;
+  /** Right of the title: the fuel counter on Görev. */
+  titleAside?: ReactNode;
 };
 
-export function ScreenHeader({ overline, title, subtitle, accent = 'acid', back = false, aside }: ScreenHeaderProps) {
+export function ScreenHeader({
+  overline,
+  title,
+  subtitle,
+  accent = 'acid',
+  back = false,
+  aside,
+  titleAside,
+}: ScreenHeaderProps) {
   return (
     <View style={{ gap: 10 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -45,9 +55,12 @@ export function ScreenHeader({ overline, title, subtitle, accent = 'acid', back 
         </Txt>
         {aside}
       </View>
-      <Txt variant="displayXL" accessibilityRole="header">
-        {title}
-      </Txt>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+        <Txt variant="displayXL" accessibilityRole="header" style={{ flex: 1 }}>
+          {title}
+        </Txt>
+        {titleAside}
+      </View>
       {subtitle ? <Txt color="moonMid">{subtitle}</Txt> : null}
     </View>
   );
