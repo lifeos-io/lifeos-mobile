@@ -1,16 +1,16 @@
 import { Link, router } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 
 import {
   useActions,
-  useActiveWeek,
   useChangeActionStatus,
   useCurrentStrategy,
   useIdeas,
   useMainGoal,
   usePendingProposals,
+  useWeeklyPlans,
 } from '@/api/hooks';
-import type { Action, ChangeProposal, StrategyVersion } from '@/api/types';
+import type { Action, ActionStatus, ChangeProposal, StrategyVersion } from '@/api/types';
 import {
   ActionRow,
   Button,
@@ -20,6 +20,7 @@ import {
   Loading,
   Orbit,
   Pill,
+  PlusIcon,
   ProgressBar,
   Screen,
   ScreenHeader,
@@ -29,17 +30,19 @@ import { signOut } from '@/auth/session';
 import { config } from '@/config';
 import { clock, daysBetween, today } from '@/lib/format';
 import { activePhase, effortQuestion, focusAction, ideasInOrbit } from '@/lib/strategy';
+import { isoWeekOf, plannedMinutes, weekToPlan } from '@/lib/week';
 
 /** Görev — bugün (Figma 02): this week's push, the orbit, the week's steps and a proposal waiting. */
 export default function MissionScreen() {
   const goal = useMainGoal();
   const strategy = useCurrentStrategy(goal.data?.id);
-  const week = useActiveWeek();
-  const actions = useActions(week.data?.isoWeek);
+  const weeks = useWeeklyPlans();
+  const plan = weeks.data?.find((p) => p.status === 'ACTIVE') ?? null;
+  const actions = useActions(plan?.isoWeek);
   const ideas = useIdeas();
   const proposals = usePendingProposals();
 
-  const failed = [goal, strategy, week, actions].find((query) => query.isError);
+  const failed = [goal, strategy, weeks, actions].find((query) => query.isError);
   if (failed) {
     return (
       <Screen tab>
@@ -47,7 +50,7 @@ export default function MissionScreen() {
       </Screen>
     );
   }
-  if (goal.isPending || week.isPending || (goal.data && strategy.isPending)) {
+  if (goal.isPending || weeks.isPending || (goal.data && strategy.isPending)) {
     return (
       <Screen tab>
         <Loading />
@@ -56,9 +59,9 @@ export default function MissionScreen() {
   }
 
   const phase = activePhase(strategy.data);
-  const plan = week.data;
   const overline = phase ? `Aşama ${phase.ordinal} · T+${daysBetween(phase.startsOn, today())} gün` : 'Bu hafta';
   const steps = (actions.data ?? []).filter((action) => action.status !== 'DROPPED');
+  const planned = plannedMinutes(steps);
   const proposal = proposals.data?.[0];
 
   return (
@@ -66,12 +69,12 @@ export default function MissionScreen() {
       <ScreenHeader
         overline={overline}
         title="Bu haftanın itkisi"
-        titleAside={plan ? <Fuel allocated={plan.allocatedMinutes} capacity={plan.capacityMinutes} /> : null}
+        titleAside={plan ? <Fuel planned={planned} capacity={plan.capacityMinutes} /> : null}
       />
       {plan ? (
         <ProgressBar
-          value={plan.allocatedMinutes / plan.capacityMinutes}
-          color={plan.allocatedMinutes > plan.capacityMinutes ? 'signal' : 'acid'}
+          value={plan.capacityMinutes ? planned / plan.capacityMinutes : 0}
+          color={planned > plan.capacityMinutes ? 'signal' : 'acid'}
         />
       ) : null}
 
@@ -107,12 +110,7 @@ export default function MissionScreen() {
       ) : plan ? (
         <Steps isoWeek={plan.isoWeek} steps={steps} loading={actions.isPending} />
       ) : (
-        <Card>
-          <Txt variant="bodyStrong">Bu hafta için rota yok.</Txt>
-          <Txt variant="small" color="moonMid" style={{ marginTop: 4 }}>
-            Yer kontrolünde haftanın adımlarını seçtiğinde burada görünür.
-          </Txt>
-        </Card>
+        <PlanWeekCard />
       )}
 
       {proposal && strategy.data ? <ProposalCard proposal={proposal} current={strategy.data} /> : null}
@@ -145,18 +143,43 @@ export default function MissionScreen() {
   );
 }
 
-/** "Yakıt 3:50 / 4 sa": the week's planned time against its capacity. */
-function Fuel({ allocated, capacity }: { allocated: number; capacity: number }) {
+/** No active week: plan this one (or the next, once this one is reviewed), or go on with its draft. */
+function PlanWeekCard() {
+  const weeks = useWeeklyPlans();
+  const { isoWeek, draft } = weekToPlan(weeks.data ?? [], today());
+  const next = isoWeek !== isoWeekOf(today());
+  return (
+    <Card border="acid" style={{ gap: 12 }}>
+      <Txt variant="bodyStrong">
+        {draft ? 'Haftanın taslağı hazır.' : next ? 'Bu hafta kapandı.' : 'Bu hafta itki yok.'}
+      </Txt>
+      <Txt variant="small" color="moonMid">
+        {draft
+          ? 'Adımlarını tamamla ve itkiyi ateşle; o zaman burada görünür.'
+          : next
+            ? 'Gelecek haftanın yakıtını ve adımlarını seç.'
+            : 'Yakıtını ve adımlarını seç, sonra itkiyi ateşle.'}
+      </Txt>
+      <Button
+        label={draft ? 'Taslağa devam et' : next ? 'Gelecek haftayı planla' : 'Haftayı planla'}
+        onPress={() => router.push({ pathname: '/week', params: { isoWeek } })}
+      />
+    </Card>
+  );
+}
+
+/** "Yakıt 3:50 / 4 sa": the time the week's steps take against its capacity. */
+function Fuel({ planned, capacity }: { planned: number; capacity: number }) {
   return (
     <View
       style={{ alignItems: 'flex-end', marginTop: -18 }}
       accessible
-      accessibilityLabel={`Yakıt: ${clock(allocated)} / ${clock(capacity)} saat`}>
+      accessibilityLabel={`Yakıt: ${clock(planned)} / ${clock(capacity)} saat`}>
       <Txt variant="small" color="moonMid">
         Yakıt
       </Txt>
-      <Txt variant="counter" color={allocated > capacity ? 'signal' : 'moon'}>
-        {clock(allocated)} / {clock(capacity)} sa
+      <Txt variant="counter" color={planned > capacity ? 'signal' : 'moon'}>
+        {clock(planned)} / {clock(capacity)} sa
       </Txt>
     </View>
   );
@@ -165,6 +188,20 @@ function Fuel({ allocated, capacity }: { allocated: number; capacity: number }) 
 function Steps({ isoWeek, steps, loading }: { isoWeek: string; steps: Action[]; loading: boolean }) {
   const changeStatus = useChangeActionStatus(isoWeek);
   const focus = focusAction(steps);
+  const set = (action: Action, status: ActionStatus) => changeStatus.mutate({ action, status });
+
+  // Long press: push the step back, or let it go (its time returns to the week).
+  const more = (action: Action) => {
+    if (action.status === 'DONE') return;
+    Alert.alert(action.title, undefined, [
+      action.status === 'DEFERRED'
+        ? { text: 'Plana geri al', onPress: () => set(action, 'PLANNED') }
+        : { text: 'Ertele', onPress: () => set(action, 'DEFERRED') },
+      { text: 'Bırak', style: 'destructive', onPress: () => set(action, 'DROPPED') },
+      { text: 'Vazgeç', style: 'cancel' },
+    ]);
+  };
+
   return (
     <View style={{ gap: 10 }}>
       <Txt variant="overline" color="moonMid">
@@ -176,11 +213,18 @@ function Steps({ isoWeek, steps, loading }: { isoWeek: string; steps: Action[]; 
           key={action.id}
           action={action}
           focused={action.id === focus?.id}
-          onPress={() =>
-            changeStatus.mutate({ action, status: action.status === 'DONE' ? 'PLANNED' : 'DONE' })
-          }
+          onPress={() => set(action, action.status === 'DONE' ? 'PLANNED' : 'DONE')}
+          onLongPress={() => more(action)}
         />
       ))}
+      <Link href={{ pathname: '/week/step', params: { isoWeek } }} asChild>
+        <Pressable
+          accessibilityRole="button"
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4, paddingHorizontal: 4 }}>
+          <PlusIcon size={16} color="acid" />
+          <Txt color="acid">Adım ekle</Txt>
+        </Pressable>
+      </Link>
     </View>
   );
 }

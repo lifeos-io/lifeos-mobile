@@ -111,6 +111,36 @@ export type WeeklyPlan = {
   updatedAt: Instant;
 };
 
+// weeklyplan/dto/CreateWeeklyPlanRequest, UpdateWeeklyPlanRequest, AllocationRequest
+export type Allocation = { goalId: Uuid; allocatedMinutes: number };
+
+export type CreateWeeklyPlan = {
+  isoWeek: string;
+  /** Null takes the profile's default. */
+  capacityMinutes: number | null;
+  headline: string | null;
+  allocations: Allocation[];
+};
+
+/** Only the fields present change; `allocations` replaces the whole split. */
+export type UpdateWeeklyPlan = {
+  version: number;
+  capacityMinutes?: number;
+  headline?: string;
+  allocations?: Allocation[];
+};
+
+// action/dto/CreateActionRequest
+export type CreateAction = {
+  title: string;
+  why: string | null;
+  expectedEvidence: string | null;
+  kind: ActionKind;
+  estimateMinutes: number;
+  goalIds: Uuid[];
+  phaseKey: Uuid | null;
+};
+
 // action/dto/ActionResponse
 export type ActionKind = 'DOMAIN' | 'TECHNICAL' | 'INFO_GATHERING' | 'EVIDENCE' | 'REST' | 'OTHER';
 export type ActionStatus = 'PLANNED' | 'DONE' | 'DEFERRED' | 'DROPPED';

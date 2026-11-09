@@ -1,5 +1,6 @@
 import type {
   Action,
+  ActionKind,
   EffortAllocation,
   EffortCategory,
   Evidence,
@@ -118,4 +119,13 @@ export const knowledgePills: Record<KnowledgeStatus, { label: string; tone: Pill
   PARTIAL: { label: 'Kısmen', tone: 'acid' },
   VERIFIED: { label: 'Doğrulandı', tone: 'acid' },
   FALSIFIED: { label: 'Yanlışlandı', tone: 'signal' },
+};
+
+export const actionKindLabels: Record<ActionKind, string> = {
+  TECHNICAL: 'Teknik',
+  DOMAIN: 'Domain',
+  INFO_GATHERING: 'Bilgi toplama',
+  EVIDENCE: 'Telemetri',
+  REST: 'Dinlenme',
+  OTHER: 'Diğer',
 };

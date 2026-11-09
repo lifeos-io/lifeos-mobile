@@ -13,7 +13,8 @@ import {
 import type { Decision } from '@/api/types';
 import { Button, Card, CheckIcon, Screen, ScreenHeader, Txt } from '@/components';
 import { errorMessage } from '@/lib/errors';
-import { nextIsoWeek, weekNumber } from '@/lib/review';
+import { backToMission } from '@/lib/navigation';
+import { nextIsoWeek, weekNumber } from '@/lib/week';
 import { colors, layout, typography } from '@/theme';
 
 const FOCUS_MAX = 500;
@@ -27,7 +28,8 @@ const verdicts: { value: Verdict; label: string }[] = [
 
 /**
  * Yer kontrolü 2/2 — next week's focus, what needs the user's approval, and how the last maneuver went (Figma 10).
- * "Rotayı onayla" writes the review (Strategy closes the week); the maneuver answer goes into went-well / stuck.
+ * "Rotayı onayla" writes the review (Strategy closes the week) and goes on to planning the next week; the maneuver
+ * answer goes into went-well / stuck.
  */
 export default function ReviewPlanScreen() {
   const { energy } = useLocalSearchParams<{ energy?: string }>();
@@ -61,8 +63,13 @@ export default function ReviewPlanScreen() {
       },
       {
         onSuccess: () => {
-          if (router.canDismiss()) router.dismissAll();
-          else router.replace('/');
+          backToMission();
+          // The week is closed: the next one is planned right away, with the focus written here.
+          const headline = focus.trim();
+          router.push({
+            pathname: '/week',
+            params: { isoWeek: nextIsoWeek(plan.weekStart), ...(headline ? { headline } : {}) },
+          });
           if (reviewProposal && proposal) {
             router.push({ pathname: '/proposals/[id]', params: { id: proposal.id } });
           }

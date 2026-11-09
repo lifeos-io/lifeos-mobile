@@ -1,3 +1,5 @@
+import { mondayOf, plannedMinutes } from '@/lib/week';
+
 import * as db from './db';
 import { respond } from './respond';
 import {
@@ -9,6 +11,9 @@ import {
   type CreateGoal,
   type CreateKnowledgeItem,
   type CreateStrategyVersion,
+  type CreateAction,
+  type CreateWeeklyPlan,
+  type UpdateWeeklyPlan,
   type Decision,
   type Evidence,
   type Feedback,
@@ -165,16 +170,141 @@ export function listActions(isoWeek: string): Promise<Action[]> {
   );
 }
 
-/** PUT /api/strategy/weekly-plans/{isoWeek}/actions/{actionId}/status {version, status} */
+function capacityExceeded(plannedMinutes: number, capacity: number) {
+  return new ApiError(
+    'STRATEGY_CAPACITY_EXCEEDED',
+    `The week's actions would take ${plannedMinutes} minutes but the week has only ${capacity}.`,
+  );
+}
+
+/** POST /api/strategy/weekly-plans → 201: a DRAFT week; one plan per ISO week. */
+export function createWeeklyPlan(request: CreateWeeklyPlan): Promise<WeeklyPlan> {
+  if (db.weeklyPlans.some((p) => p.isoWeek === request.isoWeek)) {
+    return Promise.reject(new ApiError('STRATEGY_PLAN_EXISTS', `There is already a plan for ${request.isoWeek}.`));
+  }
+  const capacity = request.capacityMinutes ?? db.profile.defaultWeeklyMinutes;
+  const allocated = request.allocations.reduce((sum, a) => sum + a.allocatedMinutes, 0);
+  if (allocated > capacity) {
+    return Promise.reject(capacityExceeded(allocated, capacity));
+  }
+  const now = new Date().toISOString();
+  const plan: WeeklyPlan = {
+    id: randomId(),
+    isoWeek: request.isoWeek,
+    weekStart: mondayOf(request.isoWeek),
+    capacityMinutes: capacity,
+    allocatedMinutes: allocated,
+    headline: request.headline,
+    status: 'DRAFT',
+    activatedAt: null,
+    closedAt: null,
+    version: 0,
+    allocations: request.allocations.map((a) => ({ ...a, strategyVersionId: null })),
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.weeklyPlans.push(plan);
+  return respond(plan);
+}
+
+/** PATCH /api/strategy/weekly-plans/{isoWeek}: draft and active weeks; the steps must still fit. */
+export function updateWeeklyPlan(isoWeek: string, request: UpdateWeeklyPlan): Promise<WeeklyPlan> {
+  const plan = weekOf(isoWeek);
+  if (plan.version !== request.version) {
+    return Promise.reject(new ApiError('CONCURRENT_MODIFICATION', 'The plan was changed in the meantime.'));
+  }
+  if (plan.status === 'CLOSED') {
+    return Promise.reject(new ApiError('STRATEGY_PLAN_STATUS', `Week is ${plan.status}.`));
+  }
+  const capacity = request.capacityMinutes ?? plan.capacityMinutes;
+  const allocations = request.allocations ?? plan.allocations;
+  const allocated = allocations.reduce((sum, a) => sum + a.allocatedMinutes, 0);
+  const planned = plannedMinutes(db.actions.filter((a) => a.weeklyPlanId === plan.id));
+  if (allocated > capacity || planned > capacity) {
+    return Promise.reject(capacityExceeded(Math.max(allocated, planned), capacity));
+  }
+  Object.assign(plan, {
+    capacityMinutes: capacity,
+    headline: request.headline ?? plan.headline,
+    allocations: allocations.map((a) => ({ strategyVersionId: null, ...a })),
+    allocatedMinutes: allocated,
+    version: plan.version + 1,
+    updatedAt: new Date().toISOString(),
+  });
+  return respond(plan);
+}
+
+/** POST /api/strategy/weekly-plans/{isoWeek}/activate: one active week at a time. */
+export function activateWeeklyPlan(isoWeek: string): Promise<WeeklyPlan> {
+  const plan = weekOf(isoWeek);
+  const active = db.weeklyPlans.find((p) => p.status === 'ACTIVE' && p.id !== plan.id);
+  if (active) {
+    return Promise.reject(
+      new ApiError('STRATEGY_PLAN_ALREADY_ACTIVE', `The plan for ${active.isoWeek} is still active.`),
+    );
+  }
+  if (plan.status !== 'DRAFT') {
+    return Promise.reject(new ApiError('STRATEGY_PLAN_STATUS', `Week is ${plan.status}.`));
+  }
+  const now = new Date().toISOString();
+  Object.assign(plan, { status: 'ACTIVE', activatedAt: now, version: plan.version + 1, updatedAt: now });
+  return respond(plan);
+}
+
+/** POST /api/strategy/weekly-plans/{isoWeek}/actions → 201: draft or active week, within the capacity. */
+export function createAction(isoWeek: string, request: CreateAction): Promise<Action> {
+  const plan = weekOf(isoWeek);
+  if (plan.status === 'CLOSED') {
+    return Promise.reject(new ApiError('STRATEGY_PLAN_STATUS', `Week is ${plan.status}.`));
+  }
+  const weekActions = db.actions.filter((a) => a.weeklyPlanId === plan.id);
+  const planned = plannedMinutes(weekActions) + request.estimateMinutes;
+  if (planned > plan.capacityMinutes) {
+    return Promise.reject(capacityExceeded(planned, plan.capacityMinutes));
+  }
+  const now = new Date().toISOString();
+  const action: Action = {
+    id: randomId(),
+    weeklyPlanId: plan.id,
+    ...request,
+    status: 'PLANNED',
+    deferredCount: 0,
+    sortOrder: Math.max(0, ...weekActions.map((a) => a.sortOrder)) + 1,
+    completedAt: null,
+    version: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.actions.push(action);
+  return respond(action);
+}
+
+/** DELETE /api/strategy/weekly-plans/{isoWeek}/actions/{actionId} → 204: only a draft week's steps. */
+export function deleteAction(isoWeek: string, actionId: Uuid): Promise<void> {
+  const plan = weekOf(isoWeek);
+  if (plan.status !== 'DRAFT') {
+    return Promise.reject(new ApiError('STRATEGY_PLAN_STATUS', `Week is ${plan.status}.`));
+  }
+  db.actions.splice(db.actions.indexOf(find(db.actions, actionId, 'Action')), 1);
+  return respond(undefined);
+}
+
+/** PUT /api/strategy/weekly-plans/{isoWeek}/actions/{actionId}/status {version, status}: only in the active week. */
 export function changeActionStatus(
-  _isoWeek: string,
+  isoWeek: string,
   actionId: Uuid,
   version: number,
   status: ActionStatus,
 ): Promise<Action> {
   const action = find(db.actions, actionId, 'Action');
   if (action.version !== version) {
-    return Promise.reject(new Error('CONCURRENT_MODIFICATION'));
+    return Promise.reject(new ApiError('CONCURRENT_MODIFICATION', 'The action was changed in the meantime.'));
+  }
+  if (weekOf(isoWeek).status !== 'ACTIVE') {
+    return Promise.reject(new ApiError('STRATEGY_PLAN_STATUS', 'Actions change status only in the active week.'));
+  }
+  if (status === 'DEFERRED' && action.status !== 'DEFERRED') {
+    action.deferredCount += 1;
   }
   action.status = status;
   action.completedAt = status === 'DONE' ? new Date().toISOString() : null;

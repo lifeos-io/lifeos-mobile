@@ -7,9 +7,12 @@ import type {
   Action,
   ActionStatus,
   CompleteWeeklyReview,
+  CreateAction,
   CreateGoal,
   CreateKnowledgeItem,
   CreateStrategyVersion,
+  CreateWeeklyPlan,
+  UpdateWeeklyPlan,
   Uuid,
 } from './types';
 
@@ -78,6 +81,53 @@ export function useCreateKnowledgeItem(goalId: Uuid | undefined) {
   return useMutation({
     mutationFn: (item: CreateKnowledgeItem) => strategy.createKnowledgeItem(goalId!, item),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.knowledge(goalId ?? '') }),
+  });
+}
+
+/** Every week's plan, newest first. */
+export function useWeeklyPlans() {
+  return useQuery({ queryKey: keys.weeklyPlans, queryFn: strategy.listWeeklyPlans });
+}
+
+/** Opening a week: a draft until it is activated. */
+export function useCreateWeeklyPlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CreateWeeklyPlan) => strategy.createWeeklyPlan(request),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.weeklyPlans }),
+  });
+}
+
+export function useUpdateWeeklyPlan(isoWeek: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (changes: UpdateWeeklyPlan) => strategy.updateWeeklyPlan(isoWeek, changes),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: keys.weeklyPlans }),
+  });
+}
+
+/** "İtkiyi ateşle": the draft becomes the active week. */
+export function useActivateWeek(isoWeek: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => strategy.activateWeeklyPlan(isoWeek),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.weeklyPlans }),
+  });
+}
+
+export function useCreateAction(isoWeek: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CreateAction) => strategy.createAction(isoWeek, request),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.actions(isoWeek) }),
+  });
+}
+
+export function useDeleteAction(isoWeek: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (actionId: Uuid) => strategy.deleteAction(isoWeek, actionId),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: keys.actions(isoWeek) }),
   });
 }
 
@@ -204,7 +254,12 @@ export function useCompleteReview(isoWeek: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (request: CompleteWeeklyReview) => strategy.completeReview(isoWeek, request),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.weeklyPlans }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: keys.weeklyPlans,
+        // A closed week has no preview (409): the screen showing it is on its way out.
+        predicate: (query) => query.queryKey[2] !== 'review',
+      }),
   });
 }
 

@@ -6,7 +6,8 @@ import { useActions, useActiveWeek, useEvidence, useIdeas, useMainGoal, useRevie
 import { Button, Card, LoadError, Loading, Screen, ScreenHeader, Txt } from '@/components';
 import { inWeek } from '@/lib/evidence';
 import { clock } from '@/lib/format';
-import { energyChoices, findings, weekNumber, type Finding } from '@/lib/review';
+import { energyChoices, findings, type Finding } from '@/lib/review';
+import { weekNumber } from '@/lib/week';
 import { colors, layout } from '@/theme';
 
 /** Yer kontrolü 1/2 — the week's numbers, the user's energy and Kule's findings (Figma 09). */

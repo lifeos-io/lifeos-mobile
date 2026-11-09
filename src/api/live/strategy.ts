@@ -7,6 +7,9 @@ import type {
   CreateGoal,
   CreateKnowledgeItem,
   CreateStrategyVersion,
+  CreateAction,
+  CreateWeeklyPlan,
+  UpdateWeeklyPlan,
   Decision,
   Evidence,
   Feedback,
@@ -66,6 +69,26 @@ export function listWeeklyPlans(): Promise<WeeklyPlan[]> {
 
 export function listActions(isoWeek: string): Promise<Action[]> {
   return request('GET', `${S}/weekly-plans/${q(isoWeek)}/actions`);
+}
+
+export function createWeeklyPlan(plan: CreateWeeklyPlan): Promise<WeeklyPlan> {
+  return request('POST', `${S}/weekly-plans`, { body: plan });
+}
+
+export function updateWeeklyPlan(isoWeek: string, changes: UpdateWeeklyPlan): Promise<WeeklyPlan> {
+  return request('PATCH', `${S}/weekly-plans/${q(isoWeek)}`, { body: changes });
+}
+
+export function activateWeeklyPlan(isoWeek: string): Promise<WeeklyPlan> {
+  return request('POST', `${S}/weekly-plans/${q(isoWeek)}/activate`);
+}
+
+export function createAction(isoWeek: string, action: CreateAction): Promise<Action> {
+  return request('POST', `${S}/weekly-plans/${q(isoWeek)}/actions`, { body: action });
+}
+
+export function deleteAction(isoWeek: string, actionId: Uuid): Promise<void> {
+  return request('DELETE', `${S}/weekly-plans/${q(isoWeek)}/actions/${q(actionId)}`);
 }
 
 export function changeActionStatus(isoWeek: string, actionId: Uuid, version: number, status: ActionStatus): Promise<Action> {

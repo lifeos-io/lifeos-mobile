@@ -11,3 +11,12 @@ export function goBack(fallback: Href = '/') {
     router.replace(fallback);
   }
 }
+
+/** Back to the tabs (Görev), closing every screen opened over them. */
+export function backToMission() {
+  if (router.canDismiss()) {
+    router.dismissAll();
+  } else {
+    router.replace('/');
+  }
+}

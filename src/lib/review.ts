@@ -3,23 +3,6 @@ import type { ColorToken } from '@/theme';
 
 import { inWeek } from './evidence';
 
-/** "2026-W46" → 46 */
-export function weekNumber(isoWeek: string): number {
-  return Number(isoWeek.split('-W')[1]);
-}
-
-/** The ISO week after `weekStart` (a Monday): "2026-W47". */
-export function nextIsoWeek(weekStart: string): string {
-  const [y, m, d] = weekStart.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d + 7));
-  // ISO week: the Thursday of the week decides the year.
-  const thursday = new Date(date);
-  thursday.setUTCDate(date.getUTCDate() + 3 - ((date.getUTCDay() + 6) % 7));
-  const firstThursday = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 4));
-  const week = 1 + Math.round(((thursday.getTime() - firstThursday.getTime()) / 86_400_000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
-  return `${thursday.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
-}
-
 /** Energy as the design asks it (Düşük / Orta / Yüksek) on Strategy's 1–5 scale. */
 export const energyChoices = [
   { label: 'Düşük', value: 2 },

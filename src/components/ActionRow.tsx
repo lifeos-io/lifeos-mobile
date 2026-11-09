@@ -12,22 +12,33 @@ type ActionRowProps = {
   /** The step to do next: drawn on acid. */
   focused?: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
 };
 
-/** One step of the week (Figma 02): dot, title, "estimate · why". A done step shows a check. */
-export function ActionRow({ action, focused = false, onPress }: ActionRowProps) {
+/**
+ * One step of the week (Figma 02): dot, title, "estimate · why". A done step shows a check; a deferred one is
+ * dimmed and says so.
+ */
+export function ActionRow({ action, focused = false, onPress, onLongPress }: ActionRowProps) {
   const done = action.status === 'DONE';
-  const meta = [duration(action.estimateMinutes), action.why].filter(Boolean).join(' · ');
+  const deferred = action.status === 'DEFERRED';
+  const meta = [deferred ? 'ertelendi' : null, duration(action.estimateMinutes), action.why]
+    .filter(Boolean)
+    .join(' · ');
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: done }}
       accessibilityLabel={`${action.title}, ${meta}`}
-      accessibilityHint={done ? 'Yeniden planlanmış olarak işaretler' : 'Tamamlandı olarak işaretler'}
+      accessibilityHint={
+        (done ? 'Yeniden planlanmış olarak işaretler' : 'Tamamlandı olarak işaretler') +
+        (onLongPress && !done ? '; uzun bas: ertele ya da bırak' : '')
+      }
       style={({ pressed }) => [
         styles.row,
-        { backgroundColor: focused ? colors.acid : colors.cabin, opacity: pressed ? 0.85 : 1 },
+        { backgroundColor: focused ? colors.acid : colors.cabin, opacity: pressed ? 0.85 : deferred ? 0.55 : 1 },
       ]}>
       <View style={styles.marker}>
         {done ? (
