@@ -8,6 +8,8 @@ const messages: Record<string, string> = {
   STRATEGY_PLAN_EXISTS: 'Bu hafta için zaten bir plan var.',
   STRATEGY_PLAN_ALREADY_ACTIVE: 'Önceki hafta hâlâ açık. Önce yer kontrolünde onu kapat.',
   STRATEGY_CAPACITY_EXCEEDED: 'Yakıt yetmiyor: adımlar haftanın süresini aşıyor. Yakıtı artır ya da bir adımı çıkar.',
+  STRATEGY_DECISION_STATUS: 'Bu manevra bu adımda değil; ekranı yenile.',
+  STRATEGY_DECISION_ALREADY_REOPENED: 'Bu manevra zaten yeniden açıldı; yeni taslaktan devam et.',
   VALIDATION_FAILED: 'Bazı alanlar geçersiz; kontrol edip tekrar dene.',
   CONCURRENT_MODIFICATION: 'Başka bir yerde değişti; ekranı yenile.',
   NETWORK: 'Sunucuya ulaşılamadı. Bağlantını kontrol et.',

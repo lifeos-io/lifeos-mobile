@@ -9,6 +9,9 @@ import type {
   CreateStrategyVersion,
   CreateAction,
   CreateWeeklyPlan,
+  CloseDecision,
+  Decide,
+  DecisionDraft,
   UpdateWeeklyPlan,
   Decision,
   Evidence,
@@ -129,6 +132,27 @@ export function completeReview(isoWeek: string, review: CompleteWeeklyReview): P
 
 export function listDecisions(): Promise<Decision[]> {
   return request('GET', `${S}/decisions`);
+}
+
+export function createDecision(draft: DecisionDraft): Promise<Decision> {
+  return request('POST', `${S}/decisions`, { body: draft });
+}
+
+export function updateDecision(decisionId: Uuid, draft: DecisionDraft & { version: number }): Promise<Decision> {
+  return request('PUT', `${S}/decisions/${q(decisionId)}`, { body: draft });
+}
+
+export function decideDecision(decisionId: Uuid, decide: Decide): Promise<Decision> {
+  return request('POST', `${S}/decisions/${q(decisionId)}/decide`, { body: decide });
+}
+
+export function closeDecision(decisionId: Uuid, close: CloseDecision): Promise<Decision> {
+  return request('POST', `${S}/decisions/${q(decisionId)}/close`, { body: close });
+}
+
+/** The decision weighed again: a new draft (the original stays until the draft is decided). */
+export function reopenDecision(decisionId: Uuid, reason: string): Promise<Decision> {
+  return request('POST', `${S}/decisions/${q(decisionId)}/reopen`, { body: { reason } });
 }
 
 export function getDecision(decisionId: Uuid): Promise<Decision> {

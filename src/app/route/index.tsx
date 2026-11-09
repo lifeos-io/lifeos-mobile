@@ -1,11 +1,12 @@
 import { Link, router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { useCurrentStrategy, useEvidence, useKnowledgeItems, useMainGoal } from '@/api/hooks';
-import type { Evidence, KnowledgeItem, Phase } from '@/api/types';
+import { useCurrentStrategy, useDecisions, useEvidence, useKnowledgeItems, useMainGoal } from '@/api/hooks';
+import type { Decision, Evidence, KnowledgeItem, Phase } from '@/api/types';
 import {
   Button,
   Card,
+  ChevronRightIcon,
   LoadError,
   Loading,
   Pill,
@@ -16,15 +17,20 @@ import {
   Txt,
 } from '@/components';
 import { clauses, daysBetween, longMonthRange, monthRange, today } from '@/lib/format';
+import { decisionPills, decisionsInOrder } from '@/lib/decision';
 import { exitTelemetry, knowledgePills } from '@/lib/strategy';
 import { colors } from '@/theme';
 
-/** Rota — the destination, its phases and what it rests on: unknowns and assumptions (Figma 03). */
+/**
+ * Rota — the destination, its phases, what it rests on (unknowns and assumptions) and the maneuvers made on the
+ * way (Figma 03).
+ */
 export default function RouteScreen() {
   const goal = useMainGoal();
   const strategy = useCurrentStrategy(goal.data?.id);
   const knowledge = useKnowledgeItems(goal.data?.id);
   const evidence = useEvidence(goal.data?.id);
+  const decisions = useDecisions();
 
   const failed = [goal, strategy].find((query) => query.isError);
   if (failed || goal.isPending || (goal.data && strategy.isPending)) {
@@ -87,6 +93,7 @@ export default function RouteScreen() {
           <Txt color="acid">Bilinmeyen ya da varsayım ekle</Txt>
         </Pressable>
       </Link>
+      <Decisions decisions={decisionsInOrder(decisions.data ?? [])} />
     </Screen>
   );
 }
@@ -232,6 +239,41 @@ function Assumptions({ items }: { items: KnowledgeItem[] }) {
         );
       })}
     </Card>
+  );
+}
+
+/** Manevralar: drafts, open and closed decisions, and a new record. */
+function Decisions({ decisions }: { decisions: Decision[] }) {
+  return (
+    <View style={{ gap: 10 }}>
+      <Txt variant="overline" color="moonMid">
+        Manevralar
+      </Txt>
+      {decisions.map((decision) => {
+        const pill = decisionPills[decision.status];
+        return (
+          <Link key={decision.id} href={{ pathname: '/decisions/[id]', params: { id: decision.id } }} asChild>
+            <Pressable accessibilityRole="button">
+              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Txt variant="bodyStrong" style={{ flex: 1 }}>
+                  {decision.title}
+                </Txt>
+                <Pill label={pill.label} tone={pill.tone} />
+                <ChevronRightIcon color="moonMid" />
+              </Card>
+            </Pressable>
+          </Link>
+        );
+      })}
+      <Link href="/decisions/edit" asChild>
+        <Pressable
+          accessibilityRole="button"
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4, paddingHorizontal: 4 }}>
+          <PlusIcon size={16} color="acid" />
+          <Txt color="acid">Manevra kaydı</Txt>
+        </Pressable>
+      </Link>
+    </View>
   );
 }
 

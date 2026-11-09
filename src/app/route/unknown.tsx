@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { useCreateKnowledgeItem, useMainGoal } from '@/api/hooks';
@@ -26,14 +27,17 @@ const kinds = [
 
 /**
  * A new unknown or assumption of the goal (the knowledge map): the route rests on it, Kule watches it, and a
- * maneuver can name it as an assumption.
+ * maneuver can name it as an assumption. `kind=ASSUMPTION` opens on an assumption.
  */
 export default function NewUnknownScreen() {
+  const params = useLocalSearchParams<{ kind?: string }>();
   const goal = useMainGoal();
   const create = useCreateKnowledgeItem(goal.data?.id);
-  const [kind, setKind] = useState<(typeof kinds)[number]['value']>('UNKNOWN');
+  const [kind, setKind] = useState<(typeof kinds)[number]['value']>(
+    params.kind === 'ASSUMPTION' ? 'ASSUMPTION' : 'UNKNOWN',
+  );
   const [statement, setStatement] = useState('');
-  const [external, setExternal] = useState(true);
+  const [external, setExternal] = useState(params.kind !== 'ASSUMPTION');
   const [howToVerify, setHowToVerify] = useState('');
   const selected = kinds.find((option) => option.value === kind)!;
 

@@ -271,7 +271,7 @@ export type Decision = {
   alternatives: { label: string; description: string; chosen: boolean; rejectionReason: string | null }[];
   assumptionIds: Uuid[];
   reopenTriggers: {
-    kind: 'DATE';
+    kind: 'DATE' | 'EVENT';
     description: string;
     eventType: string | null;
     firesOn: LocalDate | null;
@@ -281,7 +281,7 @@ export type Decision = {
   decidedAt: Instant | null;
   reviewOn: LocalDate | null;
   outcomeNote: string | null;
-  wouldDecideAgain: 'YES' | 'NO' | null;
+  wouldDecideAgain: WouldDecideAgain | null;
   closedAt: Instant | null;
   reopenedFromId: Uuid | null;
   reopenReason: string | null;
@@ -293,6 +293,23 @@ export type Decision = {
   createdAt: Instant;
   updatedAt: Instant;
 };
+
+export type WouldDecideAgain = 'YES' | 'NO' | 'GOOD_CALL_BAD_LUCK';
+
+// decision/dto/DecisionDraftRequest (POST creates a draft; PUT replaces a draft's content with `version`)
+export type DecisionDraft = {
+  goalId: Uuid | null;
+  title: string;
+  context: string | null;
+  /** Labelled A, B, C… in this order by Strategy. */
+  alternatives: { description: string; rejectionReason: string | null }[];
+  assumptionIds: Uuid[];
+  reopenTriggers: { kind: 'DATE'; description: string; eventType: null; firesOn: LocalDate }[];
+};
+
+// decision/dto/DecideRequest, CloseDecisionRequest
+export type Decide = { version: number; chosenLabel: string; expectedOutcome: string; reviewOn: LocalDate };
+export type CloseDecision = { version: number; outcomeNote: string; wouldDecideAgain: WouldDecideAgain };
 
 /**
  * A failed call. `code` is the problem detail's error code (e.g. "STRATEGY_ACTIVE_IDEA_LIMIT", "NOT_FOUND"), or

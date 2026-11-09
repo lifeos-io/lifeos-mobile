@@ -6,12 +6,15 @@ import { strategy, type IdeaTransition } from './strategy';
 import type {
   Action,
   ActionStatus,
+  CloseDecision,
   CompleteWeeklyReview,
   CreateAction,
   CreateGoal,
   CreateKnowledgeItem,
   CreateStrategyVersion,
   CreateWeeklyPlan,
+  Decide,
+  DecisionDraft,
   UpdateWeeklyPlan,
   Uuid,
 } from './types';
@@ -214,6 +217,42 @@ export function useDecisions() {
 
 export function useDecision(id: Uuid) {
   return useQuery({ queryKey: keys.decision(id), queryFn: () => strategy.getDecision(id) });
+}
+
+export function useCreateDecision() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (draft: DecisionDraft) => strategy.createDecision(draft),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.decisions }),
+  });
+}
+
+/** A decision's changes (draft content, decide, close, reopen); every decision is refetched, the list too. */
+export function useChangeDecision(id: Uuid) {
+  const queryClient = useQueryClient();
+  const settle = () => queryClient.invalidateQueries({ queryKey: keys.decisions });
+  return {
+    update: useMutation({
+      mutationFn: (draft: DecisionDraft & { version: number }) => strategy.updateDecision(id, draft),
+      onSettled: settle,
+    }),
+    decide: useMutation({
+      // Reasons for the options not chosen are part of the draft: they are saved first when they changed.
+      mutationFn: async ({ draft, decide }: { draft?: DecisionDraft & { version: number }; decide: Decide }) => {
+        const version = draft ? (await strategy.updateDecision(id, draft)).version : decide.version;
+        return strategy.decideDecision(id, { ...decide, version });
+      },
+      onSettled: settle,
+    }),
+    close: useMutation({
+      mutationFn: (close: CloseDecision) => strategy.closeDecision(id, close),
+      onSettled: settle,
+    }),
+    reopen: useMutation({
+      mutationFn: (reason: string) => strategy.reopenDecision(id, reason),
+      onSettled: settle,
+    }),
+  };
 }
 
 export function usePendingProposals() {

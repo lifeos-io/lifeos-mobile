@@ -1,3 +1,4 @@
+import { today } from '@/lib/format';
 import { mondayOf, plannedMinutes } from '@/lib/week';
 
 import * as db from './db';
@@ -13,6 +14,9 @@ import {
   type CreateStrategyVersion,
   type CreateAction,
   type CreateWeeklyPlan,
+  type CloseDecision,
+  type Decide,
+  type DecisionDraft,
   type UpdateWeeklyPlan,
   type Decision,
   type Evidence,
@@ -457,6 +461,160 @@ export function completeReview(isoWeek: string, request: CompleteWeeklyReview): 
 /** GET /api/strategy/decisions */
 export function listDecisions(): Promise<Decision[]> {
   return respond(db.decisions);
+}
+
+const labels = 'ABCDEF';
+
+function decisionOf(id: Uuid): Decision {
+  return find(db.decisions, id, 'Decision');
+}
+
+function requireDecision(decision: Decision, status: Decision['status'], version?: number): ApiError | null {
+  if (version !== undefined && decision.version !== version) {
+    return new ApiError('CONCURRENT_MODIFICATION', 'The decision was changed in the meantime.');
+  }
+  if (decision.status !== status) {
+    return new ApiError('STRATEGY_DECISION_STATUS', `Decision is ${decision.status}.`);
+  }
+  return null;
+}
+
+function draftContent(draft: DecisionDraft) {
+  return {
+    goalId: draft.goalId,
+    title: draft.title.trim(),
+    context: draft.context?.trim() || null,
+    alternatives: draft.alternatives.map((a, i) => ({
+      label: labels[i],
+      description: a.description.trim(),
+      chosen: false,
+      rejectionReason: a.rejectionReason?.trim() || null,
+    })),
+    assumptionIds: draft.assumptionIds,
+    reopenTriggers: draft.reopenTriggers.map((t) => ({ ...t, firedAt: null })),
+  };
+}
+
+/** POST /api/strategy/decisions → 201: a DRAFT. */
+export function createDecision(draft: DecisionDraft): Promise<Decision> {
+  const now = new Date().toISOString();
+  const decision: Decision = {
+    id: randomId(),
+    ...draftContent(draft),
+    status: 'DRAFT',
+    expectedOutcome: null,
+    decidedAt: null,
+    reviewOn: null,
+    outcomeNote: null,
+    wouldDecideAgain: null,
+    closedAt: null,
+    reopenedFromId: null,
+    reopenReason: null,
+    reopenedAsId: null,
+    supersededAt: null,
+    falsifiedAssumptionIds: [],
+    version: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.decisions.unshift(decision);
+  return respond(decision);
+}
+
+/** PUT /api/strategy/decisions/{decisionId}: replaces a draft's content. */
+export function updateDecision(decisionId: Uuid, draft: DecisionDraft & { version: number }): Promise<Decision> {
+  const decision = decisionOf(decisionId);
+  const error = requireDecision(decision, 'DRAFT', draft.version);
+  if (error) return Promise.reject(error);
+  Object.assign(decision, draftContent(draft), {
+    version: decision.version + 1,
+    updatedAt: new Date().toISOString(),
+  });
+  return respond(decision);
+}
+
+/**
+ * POST /api/strategy/decisions/{decisionId}/decide: at least two options, a reason for each one not chosen, a
+ * review date ahead. Deciding a reopened draft supersedes its OPEN original.
+ */
+export function decideDecision(decisionId: Uuid, request: Decide): Promise<Decision> {
+  const decision = decisionOf(decisionId);
+  const error = requireDecision(decision, 'DRAFT', request.version);
+  if (error) return Promise.reject(error);
+  const known = decision.alternatives.some((a) => a.label === request.chosenLabel);
+  const unexplained = decision.alternatives.some(
+    (a) => a.label !== request.chosenLabel && !a.rejectionReason?.trim(),
+  );
+  if (decision.alternatives.length < 2 || !known || unexplained || request.reviewOn <= today()) {
+    return Promise.reject(new ApiError('VALIDATION_FAILED', 'Request validation failed'));
+  }
+  const now = new Date().toISOString();
+  Object.assign(decision, {
+    status: 'OPEN',
+    alternatives: decision.alternatives.map((a) => ({ ...a, chosen: a.label === request.chosenLabel })),
+    expectedOutcome: request.expectedOutcome.trim(),
+    reviewOn: request.reviewOn,
+    decidedAt: now,
+    version: decision.version + 1,
+    updatedAt: now,
+  });
+  const original = decision.reopenedFromId ? db.decisions.find((d) => d.id === decision.reopenedFromId) : null;
+  if (original?.status === 'OPEN') {
+    Object.assign(original, { status: 'SUPERSEDED', supersededAt: now, version: original.version + 1 });
+  }
+  return respond(decision);
+}
+
+/** POST /api/strategy/decisions/{decisionId}/close: an OPEN decision, with what came of it. */
+export function closeDecision(decisionId: Uuid, request: CloseDecision): Promise<Decision> {
+  const decision = decisionOf(decisionId);
+  const error = requireDecision(decision, 'OPEN', request.version);
+  if (error) return Promise.reject(error);
+  const now = new Date().toISOString();
+  Object.assign(decision, {
+    status: 'CLOSED',
+    outcomeNote: request.outcomeNote.trim(),
+    wouldDecideAgain: request.wouldDecideAgain,
+    closedAt: now,
+    version: decision.version + 1,
+    updatedAt: now,
+  });
+  return respond(decision);
+}
+
+/** POST /api/strategy/decisions/{decisionId}/reopen → 201: a new draft from an OPEN or CLOSED decision, once. */
+export function reopenDecision(decisionId: Uuid, reason: string): Promise<Decision> {
+  const original = decisionOf(decisionId);
+  if (original.reopenedAsId) {
+    return Promise.reject(new ApiError('STRATEGY_DECISION_ALREADY_REOPENED', 'Already reopened.'));
+  }
+  if (original.status !== 'OPEN' && original.status !== 'CLOSED') {
+    return Promise.reject(new ApiError('STRATEGY_DECISION_STATUS', `Decision is ${original.status}.`));
+  }
+  const now = new Date().toISOString();
+  const draft: Decision = {
+    ...structuredClone(original),
+    id: randomId(),
+    status: 'DRAFT',
+    alternatives: original.alternatives.map((a) => ({ ...a, chosen: false })),
+    reopenTriggers: original.reopenTriggers.map((t) => ({ ...t, firedAt: null })),
+    expectedOutcome: null,
+    decidedAt: null,
+    reviewOn: null,
+    outcomeNote: null,
+    wouldDecideAgain: null,
+    closedAt: null,
+    reopenedFromId: original.id,
+    reopenReason: reason.trim(),
+    reopenedAsId: null,
+    supersededAt: null,
+    version: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  original.reopenedAsId = draft.id;
+  db.decisions.unshift(draft);
+  return respond(draft);
 }
 
 /** GET /api/strategy/decisions/{decisionId} */

@@ -49,7 +49,8 @@ Keycloak must accept it as the issuer.
 ```
 src/app/            routes (Expo Router)
   (tabs)/           Görev (index), Uydular (ideas), Telemetri (evidence), Kule (coach)
-  onboarding.tsx    route/ (index, edit, unknown)  week/ (index, step)  proposals/[id]  ideas/[id]  decisions/[id]
+  onboarding.tsx    route/ (index, edit, unknown)  week/ (index, step)  proposals/[id]  ideas/[id]
+                    decisions/ ([id], edit, decide, close, reopen)
                     review/ (index, plan)
 src/components/     the design system: Txt, Card, Pill, Button, Field, Chips/Toggle/Stepper, ProgressBar, ScreenHeader,
                     Screen, TabBar, icons
