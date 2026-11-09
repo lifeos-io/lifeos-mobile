@@ -249,11 +249,15 @@ export type Decision = {
   updatedAt: Instant;
 };
 
-/** A 409 from Strategy: `code` is the problem detail's error code, e.g. "STRATEGY_ACTIVE_IDEA_LIMIT". */
+/**
+ * A failed call. `code` is the problem detail's error code (e.g. "STRATEGY_ACTIVE_IDEA_LIMIT", "NOT_FOUND"), or
+ * one of the app's own: "UNAUTHENTICATED", "NETWORK", "ABORTED".
+ */
 export class ApiError extends Error {
   constructor(
     readonly code: string,
     message: string,
+    readonly status?: number,
   ) {
     super(message);
   }

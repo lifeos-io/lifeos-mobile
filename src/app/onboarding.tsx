@@ -7,11 +7,14 @@ import { errorMessage } from '@/lib/errors';
 import { goBack } from '@/lib/navigation';
 import { colors, layout, typography } from '@/theme';
 
-/** The arrival window, in months from today: when the destination should be reached. */
+/**
+ * How long the mission runs: the goal's window starts today and ends this many months later (Strategy keeps every
+ * phase inside it).
+ */
 const windows = [
-  { label: '6 ay', fromMonths: 3, toMonths: 6 },
-  { label: '6–12 ay', fromMonths: 6, toMonths: 12 },
-  { label: '12+ ay', fromMonths: 12, toMonths: 18 },
+  { label: '6 ay', months: 6 },
+  { label: '6–12 ay', months: 12 },
+  { label: '12+ ay', months: 18 },
 ] as const;
 
 const TITLE_MAX = 200;
@@ -43,8 +46,8 @@ export default function OnboardingScreen() {
           domain: 'CAREER',
           whyItMatters: null,
           successDefinition: null,
-          windowStart: monthsFromToday(chosen.fromMonths),
-          windowEnd: monthsFromToday(chosen.toMonths),
+          windowStart: monthsFromToday(0),
+          windowEnd: monthsFromToday(chosen.months),
         },
         constraints,
       },

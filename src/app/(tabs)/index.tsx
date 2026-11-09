@@ -24,10 +24,12 @@ import {
   ScreenHeader,
   Txt,
 } from '@/components';
+import { signOut } from '@/auth/session';
+import { config } from '@/config';
 import { clock, daysBetween, today } from '@/lib/format';
 import { activePhase, effortQuestion, focusAction, ideasInOrbit } from '@/lib/strategy';
 
-/** Temporary: reaches the screens that have no entry point yet. */
+/** Temporary: reaches the screens that have no entry point yet (and signs out until there is a profile screen). */
 const unreachedScreens: { href: Href; label: string }[] = [
   { href: '/onboarding', label: '01 Görev tanımı' },
 ];
@@ -121,7 +123,7 @@ export default function MissionScreen() {
 
       <View style={{ gap: 8 }}>
         <Txt variant="overline" color="moonFaint">
-          Ekranlar (geçici)
+          Geçici
         </Txt>
         {unreachedScreens.map(({ href, label }) => (
           <Link key={label} href={href} asChild>
@@ -132,6 +134,13 @@ export default function MissionScreen() {
             </Pressable>
           </Link>
         ))}
+        {config.data === 'live' ? (
+          <Pressable onPress={() => signOut()} accessibilityRole="button">
+            <Txt variant="small" color="moonMid">
+              Çıkış yap ›
+            </Txt>
+          </Pressable>
+        ) : null}
       </View>
     </Screen>
   );

@@ -6,30 +6,45 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { queryClient } from '@/api/queryClient';
+import { SignInScreen } from '@/auth/SignInScreen';
+import { useAuthStatus } from '@/auth/useAuth';
 import { colors, fontAssets } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(fontAssets);
+  const auth = useAuthStatus();
+  const ready = (fontsLoaded || !!fontError) && auth !== 'loading';
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (ready) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError]);
+  }, [ready]);
 
-  if (!fontsLoaded && !fontError) {
+  // A different user (or none) must not see the previous one's cached data.
+  useEffect(() => {
+    if (auth === 'signedOut') {
+      queryClient.clear();
+    }
+  }, [auth]);
+
+  if (!ready) {
     return null;
   }
 
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.space } }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
-      </Stack>
+      {auth === 'signedOut' ? (
+        <SignInScreen />
+      ) : (
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.space } }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
+        </Stack>
+      )}
     </QueryClientProvider>
   );
 }

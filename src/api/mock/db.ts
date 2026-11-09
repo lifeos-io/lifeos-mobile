@@ -48,7 +48,7 @@ export const goals: Goal[] = [
     domain: 'CAREER',
     whyItMatters: "Outsource'tan in-house yazılım geliştiriciliğe geçmek",
     successDefinition: 'Ekipte kadrolu yazılım geliştirici olarak imzalanmış bir teklif',
-    windowStart: '2027-05-01',
+    windowStart: '2026-11-01',
     windowEnd: '2027-11-30',
     status: 'ACTIVE',
     priority: 1,

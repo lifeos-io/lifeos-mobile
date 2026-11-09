@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import * as coach from './coach';
-import * as strategy from './strategy';
+import { coach } from './coach';
+import { strategy, type IdeaTransition } from './strategy';
 import type { Action, ActionStatus, CompleteWeeklyReview, CreateGoal, Uuid } from './types';
 
 /** Query keys, one per endpoint. */
@@ -113,7 +113,7 @@ export function useCaptureIdea() {
 export function useChangeIdea(id: Uuid) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (transition: strategy.IdeaTransition) => strategy.changeIdea(id, transition),
+    mutationFn: (transition: IdeaTransition) => strategy.changeIdea(id, transition),
     onSettled: () => queryClient.invalidateQueries({ queryKey: keys.ideas }),
   });
 }
