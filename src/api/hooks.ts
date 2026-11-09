@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import * as strategy from './strategy';
-import type { Action, ActionStatus, Uuid } from './types';
+import type { Action, ActionStatus, CompleteWeeklyReview, Uuid } from './types';
 
 /** Query keys, one per endpoint. */
 export const keys = {
@@ -14,6 +14,7 @@ export const keys = {
   evidence: (goalId: Uuid) => ['evidence', goalId] as const,
   ideas: ['ideas'] as const,
   idea: (id: Uuid) => ['ideas', id] as const,
+  reviewPreview: (isoWeek: string) => ['weekly-plans', isoWeek, 'review', 'preview'] as const,
   decisions: ['decisions'] as const,
   decision: (id: Uuid) => ['decisions', id] as const,
   proposals: ['proposals'] as const,
@@ -152,5 +153,22 @@ export function useDecideProposal(id: Uuid) {
         queryClient.invalidateQueries({ queryKey: keys.proposals }),
         queryClient.invalidateQueries({ queryKey: keys.goals }),
       ]),
+  });
+}
+
+export function useReviewPreview(isoWeek: string | undefined) {
+  return useQuery({
+    queryKey: keys.reviewPreview(isoWeek ?? ''),
+    queryFn: () => strategy.getReviewPreview(isoWeek!),
+    enabled: !!isoWeek,
+  });
+}
+
+/** Completing the review closes the week: everything about weeks is refetched. */
+export function useCompleteReview(isoWeek: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CompleteWeeklyReview) => strategy.completeReview(isoWeek, request),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.weeklyPlans }),
   });
 }

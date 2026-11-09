@@ -77,20 +77,21 @@ export default function IdeasScreen() {
 const RECENT_DAYS = 21;
 
 /**
- * Kule's pattern note: several ideas launched in the last three weeks while the goal has no fresh telemetry.
- * Shown from three ideas up.
+ * Kule's pattern note: three or more ideas launched in the last three weeks while nothing reached an outcome
+ * (activity and output alone do not count). Otherwise nothing is shown.
  */
 function Pattern({ ideas, evidence }: { ideas: Idea[]; evidence: Evidence[] }) {
   const now = today();
   const recent = ideas.filter((idea) => daysBetween(idea.createdAt.slice(0, 10), now) <= RECENT_DAYS).length;
-  if (recent < 3) return null;
-  const freshTelemetry = evidence.some((e) => daysBetween(e.occurredOn, now) <= RECENT_DAYS);
+  const outcome = evidence.some(
+    (e) => (e.level === 'OUTCOME' || e.level === 'IMPACT') && daysBetween(e.occurredOn, now) <= RECENT_DAYS,
+  );
+  if (recent < 3 || outcome) return null;
   return (
     <Card border="signal" fill="signalInk" style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
       <Pill label="Örüntü" tone="signal" />
       <Txt variant="small" style={{ flex: 1 }}>
-        Son 3 haftada {recent} uydu fırlattın
-        {freshTelemetry ? '.' : '; aktif konuda henüz telemetri yok.'}
+        Son 3 haftada {recent} uydu fırlattın; henüz sonuç düzeyinde telemetri yok.
       </Txt>
     </Card>
   );

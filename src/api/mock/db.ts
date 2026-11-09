@@ -9,6 +9,7 @@ import type {
   KnowledgeItem,
   StrategyVersion,
   WeeklyPlan,
+  WeeklyReview,
 } from '../types';
 
 /**
@@ -319,7 +320,38 @@ export const decisions: Decision[] = [
   },
 ];
 
-export const evidence: Evidence[] = [];
+export const evidence: Evidence[] = [
+  {
+    id: '019a6b10-0000-7000-8000-000000000b01',
+    title: 'Rıza akışı okuması · 3 sa',
+    level: 'ACTIVITY',
+    strength: 'SELF_REPORT',
+    occurredOn: '2026-11-05',
+    parentEvidenceId: null,
+    actionId: null,
+    feedbackId: null,
+    note: 'Ekibin OAuth rıza akışını uçtan uca okudum.',
+    goalIds: [GOAL],
+    phaseKeys: [PHASE_KEYS.adaptation],
+    createdAt: '2026-11-05T20:00:00Z',
+  },
+  {
+    id: '019a6b10-0000-7000-8000-000000000b02',
+    title: 'Alışveriş kredisi akış diyagramı',
+    level: 'OUTPUT',
+    strength: 'WORK_OUTPUT',
+    occurredOn: '2026-11-09',
+    parentEvidenceId: '019a6b10-0000-7000-8000-000000000b01',
+    actionId: null,
+    feedbackId: null,
+    note: null,
+    goalIds: [GOAL],
+    phaseKeys: [PHASE_KEYS.adaptation],
+    createdAt: '2026-11-09T09:00:00Z',
+  },
+];
+
+export const weeklyReviews: WeeklyReview[] = [];
 
 export const proposals: ChangeProposal[] = [
   {

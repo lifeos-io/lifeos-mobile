@@ -179,6 +179,41 @@ export type Evidence = {
   createdAt: Instant;
 };
 
+// weeklyreview/dto/WeeklyReviewPreviewResponse, WeeklyReviewResponse, CompleteWeeklyReviewRequest
+export type ReviewActions = {
+  planned: number;
+  done: number;
+  deferred: number;
+  dropped: number;
+  plannedMinutes: number;
+  doneMinutes: number;
+};
+
+export type WeeklyReviewPreview = {
+  isoWeek: string;
+  weekStart: LocalDate;
+  capacityMinutes: number;
+  actions: ReviewActions;
+  goals: { goalId: Uuid; allocatedMinutes: number; doneMinutes: number }[];
+  evidenceCount: number;
+};
+
+export type CompleteWeeklyReview = {
+  /** 1–5 */
+  energy: number;
+  wentWell: string | null;
+  gotStuck: string | null;
+  lesson: string | null;
+  nextWeekFocus: string | null;
+};
+
+export type WeeklyReview = Omit<WeeklyReviewPreview, 'weekStart'> &
+  CompleteWeeklyReview & {
+    id: Uuid;
+    weeklyPlanId: Uuid;
+    completedAt: Instant;
+  };
+
 // decision/dto/DecisionResponse
 export type DecisionStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'SUPERSEDED';
 

@@ -5,16 +5,20 @@ import {
   type Action,
   type ActionStatus,
   type ChangeProposal,
+  type CompleteWeeklyReview,
   type Decision,
   type Evidence,
   type Feedback,
   type Goal,
   type Idea,
   type KnowledgeItem,
+  type LocalDate,
   type ProposalStatus,
   type StrategyVersion,
   type Uuid,
   type WeeklyPlan,
+  type WeeklyReview,
+  type WeeklyReviewPreview,
 } from './types';
 
 /*
@@ -157,6 +161,71 @@ export function changeIdea(ideaId: Uuid, transition: IdeaTransition): Promise<Id
     updatedAt: now,
   });
   return respond(idea);
+}
+
+function weekOf(isoWeek: string): WeeklyPlan {
+  const plan = db.weeklyPlans.find((p) => p.isoWeek === isoWeek);
+  if (!plan) {
+    throw new NotFound('Weekly plan not found.');
+  }
+  return plan;
+}
+
+/** The numbers Strategy counts for a week (WeeklyReviewServiceImpl.tally / goalOutcomes / evidenceCount). */
+function tally(plan: WeeklyPlan) {
+  const weekActions = db.actions.filter((a) => a.weeklyPlanId === plan.id);
+  const count = (status: Action['status']) => weekActions.filter((a) => a.status === status).length;
+  const doneMinutes = (list: Action[]) =>
+    list.filter((a) => a.status === 'DONE').reduce((sum, a) => sum + a.estimateMinutes, 0);
+  const weekEnd = addDays(plan.weekStart, 6);
+  return {
+    capacityMinutes: plan.capacityMinutes,
+    actions: {
+      planned: count('PLANNED'),
+      done: count('DONE'),
+      deferred: count('DEFERRED'),
+      dropped: count('DROPPED'),
+      plannedMinutes: weekActions.filter((a) => a.status !== 'DROPPED').reduce((sum, a) => sum + a.estimateMinutes, 0),
+      doneMinutes: doneMinutes(weekActions),
+    },
+    goals: plan.allocations.map((allocation) => ({
+      goalId: allocation.goalId,
+      allocatedMinutes: allocation.allocatedMinutes,
+      doneMinutes: doneMinutes(weekActions.filter((a) => a.goalIds.includes(allocation.goalId))),
+    })),
+    evidenceCount: db.evidence.filter((e) => e.occurredOn >= plan.weekStart && e.occurredOn <= weekEnd).length,
+  };
+}
+
+function addDays(date: LocalDate, days: number): LocalDate {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+/** GET /api/strategy/weekly-plans/{isoWeek}/review/preview: live numbers, nothing stored. */
+export function getReviewPreview(isoWeek: string): Promise<WeeklyReviewPreview> {
+  const plan = weekOf(isoWeek);
+  return respond({ isoWeek, weekStart: plan.weekStart, ...tally(plan) });
+}
+
+/** POST /api/strategy/weekly-plans/{isoWeek}/review → 201; writing it closes the week. Only the ACTIVE week. */
+export function completeReview(isoWeek: string, request: CompleteWeeklyReview): Promise<WeeklyReview> {
+  const plan = weekOf(isoWeek);
+  if (plan.status !== 'ACTIVE') {
+    return Promise.reject(new ApiError('STRATEGY_PLAN_STATUS', `Week is ${plan.status}.`));
+  }
+  const now = new Date().toISOString();
+  const review: WeeklyReview = {
+    id: randomId(),
+    weeklyPlanId: plan.id,
+    isoWeek,
+    ...tally(plan),
+    ...request,
+    completedAt: now,
+  };
+  db.weeklyReviews.push(review);
+  Object.assign(plan, { status: 'CLOSED', closedAt: now, version: plan.version + 1, updatedAt: now });
+  return respond(review);
 }
 
 /** GET /api/strategy/decisions */

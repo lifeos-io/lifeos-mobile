@@ -30,7 +30,6 @@ import { activePhase, effortQuestion, focusAction, ideasInOrbit } from '@/lib/st
 /** Temporary: reaches the screens that have no entry point yet. */
 const unreachedScreens: { href: Href; label: string }[] = [
   { href: '/onboarding', label: '01 Görev tanımı' },
-  { href: '/review', label: '09 Yer kontrolü' },
 ];
 
 /** Görev — bugün (Figma 02): this week's push, the orbit, the week's steps and a proposal waiting. */
@@ -103,6 +102,22 @@ export default function MissionScreen() {
       )}
 
       {proposal && strategy.data ? <ProposalCard proposal={proposal} current={strategy.data} /> : null}
+
+      {plan ? (
+        <Link href="/review" asChild>
+          <Pressable accessibilityRole="button">
+            <Card border="line" fill="space" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Txt variant="bodyStrong">Yer kontrolü</Txt>
+                <Txt variant="small" color="moonMid">
+                  Haftayı kapat, gelecek haftanın rotasını seç · ~10 dk
+                </Txt>
+              </View>
+              <ChevronRightIcon color="moonMid" />
+            </Card>
+          </Pressable>
+        </Link>
+      ) : null}
 
       <View style={{ gap: 8 }}>
         <Txt variant="overline" color="moonFaint">
