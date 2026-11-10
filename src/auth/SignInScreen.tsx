@@ -3,21 +3,27 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Orbit, Txt } from '@/components';
+import { config, type SignInProvider } from '@/config';
 import { colors, layout } from '@/theme';
 
+import { GoogleButton } from './GoogleButton';
 import { signIn } from './session';
 
-/** Shown in live mode until the user signs in with Keycloak. */
+/**
+ * Shown in live mode until the user signs in: with an identity provider the realm brokers (Google), or with
+ * Keycloak's own login (e-mail and password).
+ */
 export function SignInScreen() {
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const google = config.signInProviders.includes('google');
 
-  const start = async () => {
+  const start = async (provider?: SignInProvider) => {
     setBusy(true);
     setFailed(false);
     try {
-      await signIn();
+      await signIn(provider);
     } catch {
       setFailed(true);
     } finally {
@@ -53,7 +59,14 @@ export function SignInScreen() {
             Giriş yapılamadı. Bağlantıyı kontrol edip tekrar dene.
           </Txt>
         ) : null}
-        <Button label={busy ? 'Bağlanıyor…' : 'Giriş yap'} disabled={busy} onPress={start} />
+        {google ? (
+          <>
+            <GoogleButton label="Google ile devam et" disabled={busy} onPress={() => start('google')} />
+            <Button kind="ghost" label="E-posta ile giriş" disabled={busy} onPress={() => start()} />
+          </>
+        ) : (
+          <Button label={busy ? 'Bağlanıyor…' : 'Giriş yap'} disabled={busy} onPress={() => start()} />
+        )}
       </View>
     </View>
   );

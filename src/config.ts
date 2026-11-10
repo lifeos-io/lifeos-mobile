@@ -6,11 +6,20 @@
  * - `EXPO_PUBLIC_API_URL`: the gateway. The iOS Simulator reaches the Mac's localhost; a phone needs the Mac's
  *   LAN address, and Keycloak must then issue tokens for that same host.
  * - `EXPO_PUBLIC_AUTH_URL`: the Keycloak realm (the tokens' issuer).
+ * - `EXPO_PUBLIC_SIGN_IN_PROVIDERS`: comma-separated identity providers the realm brokers (`google`), shown as
+ *   buttons on the sign-in screen; empty shows only Keycloak's own login.
  */
+export type SignInProvider = 'google';
+const knownProviders: readonly SignInProvider[] = ['google'];
+
 export const config = {
   data: process.env.EXPO_PUBLIC_DATA === 'live' ? ('live' as const) : ('mock' as const),
   apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080',
   authUrl: process.env.EXPO_PUBLIC_AUTH_URL ?? 'http://localhost:8180/realms/lifeos',
   /** Public client with PKCE in the realm (lifeos-infra/local/keycloak/realm-lifeos.json). */
   clientId: 'lifeos-mobile',
+  signInProviders: (process.env.EXPO_PUBLIC_SIGN_IN_PROVIDERS ?? '')
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p): p is SignInProvider => (knownProviders as readonly string[]).includes(p)),
 };

@@ -40,6 +40,9 @@ Checks: `npm run typecheck`, `npm run lint`.
    Coach needs `OPENAI_API_KEY`; without a real key everything works except Kule's answers, which show an error.
 3. Give the local user the Figma scenario: `scripts/seed-local.sh` (needs `jq`; user `onurcan` / `lifeos`).
 4. Set `EXPO_PUBLIC_DATA=live` in `.env`, start the app and sign in as `onurcan` / `lifeos`.
+5. Optional, "Google ile devam et": set up Google in Keycloak (`../lifeos-infra/local/README.md`, "Sign in with
+   Google") and add `EXPO_PUBLIC_SIGN_IN_PROVIDERS=google` to `.env`. The button skips Keycloak's login page
+   (`kc_idp_hint`); "E-posta ile giriş" keeps it.
 
 `localhost` reaches the Mac from the iOS Simulator. On a phone, use the Mac's LAN address for both URLs, and
 Keycloak must accept it as the issuer.
@@ -56,7 +59,7 @@ src/components/     the design system: Txt, Card, Pill, Button, Field, Chips/Tog
                     ScreenHeader, Screen, PrivacyNote, TabBar, icons
 src/theme/          color tokens, text styles, spacing
 src/api/            data access: strategy.ts/coach.ts pick mock/ or live/; types, hooks, the React Query client
-src/auth/           Keycloak session (sign-in, refresh, sign-out) and the sign-in screen
+src/auth/           Keycloak session (sign-in, refresh, sign-out), the sign-in screen and Google's button
 src/config.ts       EXPO_PUBLIC_* settings
 scripts/            seed-local.sh: the Figma scenario for the local user
 ```

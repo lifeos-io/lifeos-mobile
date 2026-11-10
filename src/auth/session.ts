@@ -8,7 +8,7 @@ import {
 } from 'expo-auth-session';
 import * as SecureStore from 'expo-secure-store';
 
-import { config } from '@/config';
+import { config, type SignInProvider } from '@/config';
 
 /**
  * The signed-in user's Keycloak tokens: authorization code flow with PKCE against the public client
@@ -88,11 +88,20 @@ export async function restore(): Promise<void> {
   setStatus(tokens ? 'signedIn' : 'signedOut');
 }
 
-/** Opens Keycloak's login page; resolves true once signed in, false when the user cancels. */
-export async function signIn(): Promise<boolean> {
+/**
+ * Opens Keycloak's login page, or with a `provider` goes straight to that identity provider through Keycloak
+ * (`kc_idp_hint`); resolves true once signed in, false when the user cancels.
+ */
+export async function signIn(provider?: SignInProvider): Promise<boolean> {
   const doc = await getDiscovery();
   const redirectUri = makeRedirectUri({ scheme: 'lifeos', path: 'auth' });
-  const request = new AuthRequest({ clientId: config.clientId, redirectUri, scopes: ['openid'], usePKCE: true });
+  const request = new AuthRequest({
+    clientId: config.clientId,
+    redirectUri,
+    scopes: ['openid'],
+    usePKCE: true,
+    extraParams: provider ? { kc_idp_hint: provider } : undefined,
+  });
   const result = await request.promptAsync(doc);
   if (result.type !== 'success') {
     return false;
