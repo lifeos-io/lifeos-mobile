@@ -1,4 +1,12 @@
-import type { Evidence, EvidenceLevel, EvidenceStrength, LocalDate, Phase } from '@/api/types';
+import type {
+  Evidence,
+  EvidenceLevel,
+  EvidenceStrength,
+  FeedbackSourceKind,
+  LocalDate,
+  Phase,
+  Reliability,
+} from '@/api/types';
 
 export const levels: EvidenceLevel[] = ['ACTIVITY', 'OUTPUT', 'OUTCOME', 'IMPACT'];
 
@@ -25,6 +33,25 @@ export const strengthLabels: Record<EvidenceStrength, string> = {
   PERSONAL_PROJECT: 'Kişisel proje',
   WORK_OUTPUT: 'İş çıktısı',
   EXTERNAL_FEEDBACK: 'Dış geri bildirim',
+};
+
+/** Whether evidence at `level` can build on a parent at `parent`: only on a lower step (Strategy's canBuildOn). */
+export function canBuildOn(level: EvidenceLevel, parent: EvidenceLevel): boolean {
+  return levels.indexOf(parent) < levels.indexOf(level);
+}
+
+export const sourceKindLabels: Record<FeedbackSourceKind, string> = {
+  MANAGER: 'Yönetici',
+  PEER: 'Ekip arkadaşı',
+  CODE_REVIEW: 'Kod incelemesi',
+  SELF: 'Kendim',
+  OTHER: 'Diğer',
+};
+
+export const reliabilityLabels: Record<Reliability, string> = {
+  HIGH: 'Yüksek',
+  MEDIUM: 'Orta',
+  LOW: 'Düşük',
 };
 
 /** One step of a chain: the evidence at that level, or nothing yet. */

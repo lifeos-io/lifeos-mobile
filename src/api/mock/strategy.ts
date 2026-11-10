@@ -27,6 +27,8 @@ import {
   type LocalDate,
   type Profile,
   type ProposalStatus,
+  type RecordEvidence,
+  type RecordFeedback,
   type StrategyVersion,
   type Uuid,
   type WeeklyPlan,
@@ -322,9 +324,67 @@ export function getFeedback(feedbackId: Uuid): Promise<Feedback> {
   return respond(find(db.feedback, feedbackId, 'Feedback'));
 }
 
-/** GET /api/strategy/evidence?goalId= */
+/** GET /api/strategy/feedback: most recently received first. */
+export function listFeedback(): Promise<Feedback[]> {
+  return respond([...db.feedback].sort((a, b) => b.receivedOn.localeCompare(a.receivedOn)));
+}
+
+/** POST /api/strategy/feedback → 201: not received in the future. */
+export function recordFeedback(request: RecordFeedback): Promise<Feedback> {
+  if (request.receivedOn > today() || !request.content.trim()) {
+    return Promise.reject(new ApiError('VALIDATION_FAILED', 'Request validation failed'));
+  }
+  const feedback: Feedback = {
+    id: randomId(),
+    ...request,
+    sourceLabel: request.sourceLabel?.trim() || null,
+    content: request.content.trim(),
+    createdAt: new Date().toISOString(),
+  };
+  db.feedback.push(feedback);
+  return respond(feedback);
+}
+
+/** GET /api/strategy/evidence?goalId=: most recent first. */
 export function listEvidence(goalId?: Uuid): Promise<Evidence[]> {
-  return respond(db.evidence.filter((e) => !goalId || e.goalIds.includes(goalId)));
+  return respond(
+    db.evidence
+      .filter((e) => !goalId || e.goalIds.includes(goalId))
+      .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt.localeCompare(a.createdAt)),
+  );
+}
+
+const levelOrder: Evidence['level'][] = ['ACTIVITY', 'OUTPUT', 'OUTCOME', 'IMPACT'];
+
+/**
+ * POST /api/strategy/evidence → 201 (EvidenceServiceImpl.record): not in the future; the parent a lower step of
+ * the chain; an action's goals when none are given; phases only together with goals.
+ */
+export function recordEvidence(request: RecordEvidence): Promise<Evidence> {
+  const parent = request.parentEvidenceId ? db.evidence.find((e) => e.id === request.parentEvidenceId) : undefined;
+  const action = request.actionId ? db.actions.find((a) => a.id === request.actionId) : undefined;
+  const goalIds = request.goalIds.length ? request.goalIds : (action?.goalIds ?? []);
+  const invalid =
+    !request.title.trim() ||
+    request.occurredOn > today() ||
+    (request.parentEvidenceId &&
+      (!parent || levelOrder.indexOf(parent.level) >= levelOrder.indexOf(request.level))) ||
+    (request.actionId && !action) ||
+    (request.feedbackId && !db.feedback.some((f) => f.id === request.feedbackId)) ||
+    (request.phaseKeys.length > 0 && goalIds.length === 0);
+  if (invalid) {
+    return Promise.reject(new ApiError('VALIDATION_FAILED', 'Request validation failed'));
+  }
+  const evidence: Evidence = {
+    id: randomId(),
+    ...request,
+    title: request.title.trim(),
+    note: request.note?.trim() || null,
+    goalIds,
+    createdAt: new Date().toISOString(),
+  };
+  db.evidence.push(evidence);
+  return respond(evidence);
 }
 
 /** GET /api/strategy/ideas */

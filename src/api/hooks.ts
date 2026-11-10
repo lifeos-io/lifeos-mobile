@@ -15,6 +15,8 @@ import type {
   CreateWeeklyPlan,
   Decide,
   DecisionDraft,
+  RecordEvidence,
+  RecordFeedback,
   UpdateWeeklyPlan,
   Uuid,
 } from './types';
@@ -29,6 +31,7 @@ export const keys = {
   knowledge: (goalId: Uuid) => ['goals', goalId, 'knowledge'] as const,
   weeklyPlans: ['weekly-plans'] as const,
   actions: (isoWeek: string) => ['weekly-plans', isoWeek, 'actions'] as const,
+  feedbackList: ['feedback', 'list'] as const,
   feedback: (id: Uuid) => ['feedback', id] as const,
   evidence: (goalId: Uuid) => ['evidence', goalId] as const,
   ideas: ['ideas'] as const,
@@ -168,11 +171,36 @@ export function useFeedback(id: Uuid | undefined) {
   });
 }
 
+export function useFeedbackList() {
+  return useQuery({ queryKey: keys.feedbackList, queryFn: strategy.listFeedback });
+}
+
+export function useRecordFeedback() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: RecordFeedback) => strategy.recordFeedback(request),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.feedbackList }),
+  });
+}
+
 export function useEvidence(goalId: Uuid | undefined) {
   return useQuery({
     queryKey: keys.evidence(goalId ?? ''),
     queryFn: () => strategy.listEvidence(goalId),
     enabled: !!goalId,
+  });
+}
+
+/** Recording evidence also changes the week's review numbers (evidence count). */
+export function useRecordEvidence() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: RecordEvidence) => strategy.recordEvidence(request),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['evidence'] }),
+        queryClient.invalidateQueries({ queryKey: keys.weeklyPlans, predicate: (query) => query.queryKey[2] === 'review' }),
+      ]),
   });
 }
 

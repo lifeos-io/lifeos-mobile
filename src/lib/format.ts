@@ -83,3 +83,9 @@ export function clauses(text: string): string[] {
     .map((clause) => clause.trim())
     .filter(Boolean);
 }
+
+/** "Bugün", "Dün" or "7 Kas": a recent day in the past. */
+export function pastDay(date: LocalDate, now: LocalDate = today()): string {
+  const ago = daysBetween(date, now);
+  return ago === 0 ? 'Bugün' : ago === 1 ? 'Dün' : dayMonth(date);
+}

@@ -190,6 +190,21 @@ function Steps({ isoWeek, steps, loading }: { isoWeek: string; steps: Action[]; 
   const focus = focusAction(steps);
   const set = (action: Action, status: ActionStatus) => changeStatus.mutate({ action, status });
 
+  // Finishing a step that should leave telemetry asks for it while it is fresh.
+  const finish = (action: Action) =>
+    changeStatus.mutate(
+      { action, status: 'DONE' },
+      {
+        onSuccess: () => {
+          if (!action.expectedEvidence) return;
+          Alert.alert('Telemetri kaydet?', `Beklenen: ${action.expectedEvidence}`, [
+            { text: 'Sonra', style: 'cancel' },
+            { text: 'Kaydet', onPress: () => router.push({ pathname: '/evidence/new', params: { actionId: action.id } }) },
+          ]);
+        },
+      },
+    );
+
   // Long press: push the step back, or let it go (its time returns to the week).
   const more = (action: Action) => {
     if (action.status === 'DONE') return;
@@ -213,7 +228,7 @@ function Steps({ isoWeek, steps, loading }: { isoWeek: string; steps: Action[]; 
           key={action.id}
           action={action}
           focused={action.id === focus?.id}
-          onPress={() => set(action, action.status === 'DONE' ? 'PLANNED' : 'DONE')}
+          onPress={() => (action.status === 'DONE' ? set(action, 'PLANNED') : finish(action))}
           onLongPress={() => more(action)}
         />
       ))}

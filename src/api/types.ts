@@ -311,6 +311,29 @@ export type DecisionDraft = {
 export type Decide = { version: number; chosenLabel: string; expectedOutcome: string; reviewOn: LocalDate };
 export type CloseDecision = { version: number; outcomeNote: string; wouldDecideAgain: WouldDecideAgain };
 
+// evidence/dto/RecordEvidenceRequest
+export type RecordEvidence = {
+  title: string;
+  level: EvidenceLevel;
+  strength: EvidenceStrength;
+  occurredOn: LocalDate;
+  parentEvidenceId: Uuid | null;
+  actionId: Uuid | null;
+  feedbackId: Uuid | null;
+  note: string | null;
+  goalIds: Uuid[];
+  phaseKeys: Uuid[];
+};
+
+// feedback/dto/RecordFeedbackRequest
+export type RecordFeedback = {
+  sourceKind: FeedbackSourceKind;
+  sourceLabel: string | null;
+  content: string;
+  reliability: Reliability;
+  receivedOn: LocalDate;
+};
+
 /**
  * A failed call. `code` is the problem detail's error code (e.g. "STRATEGY_ACTIVE_IDEA_LIMIT", "NOT_FOUND"), or
  * one of the app's own: "UNAUTHENTICATED", "NETWORK", "ABORTED".

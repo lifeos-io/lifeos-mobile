@@ -21,6 +21,8 @@ import type {
   KnowledgeItem,
   Profile,
   ProposalStatus,
+  RecordEvidence,
+  RecordFeedback,
   StrategyVersion,
   Uuid,
   WeeklyPlan,
@@ -102,8 +104,20 @@ export function getFeedback(feedbackId: Uuid): Promise<Feedback> {
   return request('GET', `${S}/feedback/${q(feedbackId)}`);
 }
 
+export function listFeedback(): Promise<Feedback[]> {
+  return request('GET', `${S}/feedback`);
+}
+
+export function recordFeedback(feedback: RecordFeedback): Promise<Feedback> {
+  return request('POST', `${S}/feedback`, { body: feedback });
+}
+
 export function listEvidence(goalId?: Uuid): Promise<Evidence[]> {
   return request('GET', `${S}/evidence${goalId ? `?goalId=${q(goalId)}` : ''}`);
+}
+
+export function recordEvidence(evidence: RecordEvidence): Promise<Evidence> {
+  return request('POST', `${S}/evidence`, { body: evidence });
 }
 
 export function listIdeas(): Promise<Idea[]> {

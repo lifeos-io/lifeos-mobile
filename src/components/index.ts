@@ -1,13 +1,14 @@
 export { ActionRow } from './ActionRow';
 export { Button } from './Button';
 export { Card } from './Card';
-export { Chips, Stepper, Toggle } from './Choice';
+export { Chips, PickRow, Stepper, Toggle } from './Choice';
 export { EffortBar, EffortLegend, effortColors } from './EffortBar';
 export { Field } from './Field';
 export * from './icons';
 export { LoadError, Loading } from './Loading';
 export { Orbit, type Satellite } from './Orbit';
 export { Pill, type PillTone } from './Pill';
+export { PrivacyNote } from './PrivacyNote';
 export { ProgressBar } from './ProgressBar';
 export { RichText } from './RichText';
 export { Screen } from './Screen';

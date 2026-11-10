@@ -1,6 +1,6 @@
 import { Pressable, View } from 'react-native';
 
-import { colors } from '@/theme';
+import { colors, layout } from '@/theme';
 
 import { CheckIcon } from './icons';
 import { Txt } from './Txt';
@@ -118,5 +118,51 @@ export function Stepper({
       </Txt>
       {button(1, canIncrease)}
     </View>
+  );
+}
+
+/**
+ * A card to pick one of a few records (a step, a piece of evidence, a feedback); tapping the picked one again
+ * unpicks it, so the link stays optional.
+ */
+export function PickRow({
+  title,
+  meta,
+  selected,
+  onPress,
+}: {
+  title: string;
+  meta?: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: colors.cabin,
+        borderRadius: layout.cardRadius,
+        borderWidth: 1,
+        borderColor: selected ? colors.acid : colors.line,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+      }}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Txt variant="bodyStrong" numberOfLines={2}>
+          {title}
+        </Txt>
+        {meta ? (
+          <Txt variant="small" color="moonMid" numberOfLines={1}>
+            {meta}
+          </Txt>
+        ) : null}
+      </View>
+      {selected ? <CheckIcon size={16} color="acid" /> : null}
+    </Pressable>
   );
 }

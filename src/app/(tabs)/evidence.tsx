@@ -1,8 +1,20 @@
-import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { useActiveWeek, useCurrentStrategy, useEvidence, useMainGoal } from '@/api/hooks';
 import type { Evidence, Phase } from '@/api/types';
-import { Card, LoadError, Loading, LockIcon, Pill, Screen, ScreenHeader, Txt, type PillTone } from '@/components';
+import {
+  Card,
+  LoadError,
+  Loading,
+  Pill,
+  PlusIcon,
+  PrivacyNote,
+  Screen,
+  ScreenHeader,
+  Txt,
+  type PillTone,
+} from '@/components';
 import {
   inWeek,
   latestChain,
@@ -30,6 +42,7 @@ export default function EvidenceScreen() {
         overline="Ölçülebilir ilerleme"
         title="Telemetri"
         subtitle="Saat ilerleme değildir. Burada yalnızca hayatında neyin değiştiği sayılır."
+        titleAside={<AddButton />}
       />
 
       {evidence.isError ? <LoadError onRetry={() => evidence.refetch()} /> : null}
@@ -41,22 +54,43 @@ export default function EvidenceScreen() {
         <Card border="line" fill="space">
           <Txt variant="bodyStrong">Henüz telemetri yok.</Txt>
           <Txt variant="small" color="moonMid" style={{ marginTop: 4 }}>
-            Bir adımı bitirdiğinde ortaya çıkanı buraya yaz; zincir oradan büyür.
+            Bir adımı bitirdiğinde ortaya çıkanı + ile kaydet; zincir oradan büyür.
           </Txt>
         </Card>
       ) : null}
 
       {strategy.data && evidence.data ? <Strength phases={strategy.data.phases} evidence={evidence.data} /> : null}
 
-      <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-        <View style={{ paddingTop: 1 }}>
-          <LockIcon size={16} color="moonMid" />
-        </View>
-        <Txt variant="small" color="moonMid" style={{ flex: 1 }}>
-          Kurumsal kod ve müşteri verisi buraya girmez; kendi cümlenle özetle.
-        </Txt>
-      </View>
+      <PrivacyNote />
     </Screen>
+  );
+}
+
+/** "+": a new piece of evidence, or a feedback received (which may then be recorded as evidence too). */
+function AddButton() {
+  const choose = () =>
+    Alert.alert('Ne kaydedeceksin?', undefined, [
+      { text: 'Telemetri', onPress: () => router.push('/evidence/new') },
+      { text: 'Geri bildirim', onPress: () => router.push('/feedback/new') },
+      { text: 'Vazgeç', style: 'cancel' },
+    ]);
+  return (
+    <Pressable
+      onPress={choose}
+      accessibilityRole="button"
+      accessibilityLabel="Kaydet: telemetri ya da geri bildirim"
+      hitSlop={8}
+      style={({ pressed }) => ({
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.acid,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.8 : 1,
+      })}>
+      <PlusIcon size={22} color="acidInk" />
+    </Pressable>
   );
 }
 

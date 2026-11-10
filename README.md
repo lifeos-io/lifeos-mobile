@@ -51,9 +51,9 @@ src/app/            routes (Expo Router)
   (tabs)/           Görev (index), Uydular (ideas), Telemetri (evidence), Kule (coach)
   onboarding.tsx    route/ (index, edit, unknown)  week/ (index, step)  proposals/[id]  ideas/[id]
                     decisions/ ([id], edit, decide, close, reopen)
-                    review/ (index, plan)
-src/components/     the design system: Txt, Card, Pill, Button, Field, Chips/Toggle/Stepper, ProgressBar, ScreenHeader,
-                    Screen, TabBar, icons
+                    review/ (index, plan)  evidence/new  feedback/new
+src/components/     the design system: Txt, Card, Pill, Button, Field, Chips/Toggle/Stepper/PickRow, ProgressBar,
+                    ScreenHeader, Screen, PrivacyNote, TabBar, icons
 src/theme/          color tokens, text styles, spacing
 src/api/            data access: strategy.ts/coach.ts pick mock/ or live/; types, hooks, the React Query client
 src/auth/           Keycloak session (sign-in, refresh, sign-out) and the sign-in screen
